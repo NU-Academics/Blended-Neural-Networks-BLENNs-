@@ -592,8 +592,8 @@ training_params = {
 ```python
 # If standard import fails:
 import sys
-sys.path.append('/path/to/Blenns_Walk_Forward')
-from blenns_wf.core import BLENNSWalkForward
+sys.path.append('/path/to/Blended-Neural-Networks-BLENNs-')
+from blenns_wf.core import Blended-Neural-Networks-BLENNs-
 ```
 
 **Memory Issues:**
