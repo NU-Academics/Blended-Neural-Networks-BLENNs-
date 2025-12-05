@@ -118,7 +118,7 @@ trader = BLENNSWalkForward("BTC-USD", bfc_params=bfc_params)
 
 ### Complete Workflow with Visualizations
 ```
-from blenns_wf import BLENNSWalkForward
+from blenns_wf import Blended-Neural-Networks-BLENNs-
 from blenns_wf.utils import visualize_candles, explain_model_with_shap, plot_training_curves, plot_uncertainty_candle, monte_carlo_predict
 import matplotlib.pyplot as plt
 import numpy as np
@@ -690,7 +690,7 @@ We welcome contributions! Please see our contributing guidelines:
 
 ### Development Setup
 ```bash
-git clone https://github.com/DataScienceCoach/Blenns_Walk_Forward.git
+git clone https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-.git
 cd Blenns_Walk_Forward
 pip install -e ".[dev]"
 pytest tests/
@@ -702,8 +702,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support & Community
 
-- **GitHub Issues**: [Report bugs & request features](https://github.com/DataScienceCoach/Blenns_Walk_Forward/issues)
-- **Discussions**: [Join the community](https://github.com/DataScienceCoach/Blenns_Walk_Forward/discussions)
+- **GitHub Issues**: [Report bugs & request features](https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-.git/issues)
+- **Discussions**: [Join the community](https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-.git/discussions)
 - **Email**: support@example.com
 
 ## 🙏 Acknowledgments
