@@ -712,6 +712,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - TensorFlow team for deep learning framework
 - SHAP developers for model interpretability tools
 - Financial computing community for continuous inspiration
+- Dr.Tsapara for her valuable Review and detecting that i have strenght in this area of research
+- Dr.Hamzah for his valuable input and constant review and suggestions.
 
 ---
 
