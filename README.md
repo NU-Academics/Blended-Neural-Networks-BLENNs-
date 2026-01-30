@@ -62,7 +62,8 @@ Blend Neural Networks (BLENNs) is a cutting-edge trading prediction system that 
 ### Basic Prediction
 
 ```python
-from blenns_walk_forward import Blended-Neural-Networks-BLENNs-
+
+from blenns_walk_forward import BLENNSWalkForward
 
 # Initialize with any financial instrument
 trader = BLENNSWalkForward("AAPL")
