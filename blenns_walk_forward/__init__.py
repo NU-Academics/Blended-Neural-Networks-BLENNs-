@@ -14,7 +14,7 @@ from .utils import (
 )
 
 __version__ = "1.0.0"
-__author__ = "Emmanuel A. Adeyemo"
+__author__ = "Your Name"
 __all__ = [
     'BLENNSWalkForward',
     'visualize_candles',
