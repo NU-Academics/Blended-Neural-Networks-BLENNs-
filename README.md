@@ -55,9 +55,6 @@ Blend Neural Networks (BLENNs) is a cutting-edge trading prediction system that 
 %cd Blended-Neural-Networks-BLENNs-
 !pip install -e .
 
-# Verify installation
-from blenns_wf import Blended-Neural-Networks-BLENNs-
-print("✅ BLENNS installed successfully!")
 ```
 
 ## 🎯 Quick Start
