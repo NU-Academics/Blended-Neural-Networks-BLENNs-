@@ -37,6 +37,7 @@ class BLENNSWalkForward:
         self.bfc_params = bfc_params or {'alpha': 0.2, 'R': 0.1**2, 'Q': 1e-5}
         self.last_data = None
         self.history = None
+        self.trained = False
         
     def compute_bfc(self, df, alpha=0.2, R=0.1**2, Q=1e-5):
         """
@@ -153,8 +154,8 @@ class BLENNSWalkForward:
         --------
         pandas.DataFrame with processed data
         """
-        import pandas as pd
         from datetime import datetime
+        import pandas as pd
         
         if end_date is None:
             end_date = datetime.today().strftime('%Y-%m-%d')
@@ -172,37 +173,69 @@ class BLENNSWalkForward:
                 threads=True
             )
 
-            # Reset index
-            if isinstance(data.index, pd.MultiIndex):
-                data = data.reset_index()
+            # yfinance returns data with Date as index
+            # Reset index to make Date a column
+            data = data.reset_index()
             
-            # Standardize column names
-            column_map = {
-                'Date': 'date',
-                'Datetime': 'date',
+            # Check column names
+            print(f"Raw columns from yfinance: {list(data.columns)}")
+            
+            # Handle different column naming
+            date_column = None
+            for col in data.columns:
+                if isinstance(col, str) and 'date' in col.lower():
+                    date_column = col
+                    break
+                elif col == 'Date' or col == 'Datetime':
+                    date_column = col
+            
+            if date_column:
+                data = data.rename(columns={date_column: 'date'})
+            else:
+                # If no date column found, check if index was reset
+                if 'index' in data.columns:
+                    data = data.rename(columns={'index': 'date'})
+                else:
+                    # Create date column from index
+                    data = data.reset_index().rename(columns={'index': 'date'})
+            
+            # Convert date column to datetime
+            data['date'] = pd.to_datetime(data['date'])
+            
+            # Standardize other column names
+            column_mapping = {
                 'Open': 'open',
                 'High': 'high',
                 'Low': 'low',
                 'Close': 'close',
-                'Volume': 'volume',
-                'Adj Close': 'adj_close'
+                'Adj Close': 'adj_close',
+                'Volume': 'volume'
             }
             
-            data = data.rename(columns={k: v for k, v in column_map.items() 
-                                      if k in data.columns})
+            # Rename columns
+            for old_name, new_name in column_mapping.items():
+                if old_name in data.columns:
+                    data = data.rename(columns={old_name: new_name})
             
-            # Ensure date column is datetime
-            if 'date' in data.columns:
-                data['date'] = pd.to_datetime(data['date'])
-            else:
-                data = data.reset_index().rename(columns={'index': 'date'})
-                data['date'] = pd.to_datetime(data['date'])
-
             # Validate required columns
             required_ohlc = ['open', 'high', 'low', 'close']
-            if not all(col in data.columns for col in required_ohlc):
-                raise ValueError(f"Missing required OHLC columns. Available: {list(data.columns)}")
-
+            missing_cols = [col for col in required_ohlc if col not in data.columns]
+            
+            if missing_cols:
+                raise ValueError(f"Missing required columns: {missing_cols}. Available columns: {list(data.columns)}")
+            
+            # Fill missing values if any
+            data[required_ohlc] = data[required_ohlc].ffill().bfill()
+            
+            # Ensure volume column exists
+            if 'volume' not in data.columns:
+                data['volume'] = 0
+            else:
+                data['volume'] = data['volume'].fillna(0)
+            
+            # Sort by date
+            data = data.sort_values('date').reset_index(drop=True)
+            
             # Apply BFC
             print("🔄 Applying BFC processing...")
             bfc_data = self.compute_bfc(data, **self.bfc_params)
@@ -210,17 +243,51 @@ class BLENNSWalkForward:
             # Update OHLC with BFC values
             data[['open', 'high', 'low', 'close']] = bfc_data.values
             
-            # Add volume if missing
-            if 'volume' not in data.columns:
-                data['volume'] = 0
-
+            # Store the data
             self.last_data = data
+            
             print(f"✅ Successfully loaded {len(data)} rows of data")
+            print(f"   Date range: {data['date'].min().date()} to {data['date'].max().date()}")
+            print(f"   Columns: {list(data.columns)}")
+            
             return data
 
         except Exception as e:
             print(f"❌ Data loading failed: {str(e)}")
-            raise
+            print("Trying alternative data source...")
+            
+            # Try alternative approach with different parameters
+            try:
+                data = yf.download(
+                    tickers=self.symbol,
+                    period="1y",  # Try with period instead of dates
+                    interval=interval,
+                    progress=False
+                )
+                
+                data = data.reset_index()
+                data = data.rename(columns={'Date': 'date'})
+                data['date'] = pd.to_datetime(data['date'])
+                
+                # Standardize columns
+                for old_name, new_name in column_mapping.items():
+                    if old_name in data.columns:
+                        data = data.rename(columns={old_name: new_name})
+                
+                # Apply BFC
+                bfc_data = self.compute_bfc(data, **self.bfc_params)
+                data[['open', 'high', 'low', 'close']] = bfc_data.values
+                
+                if 'volume' not in data.columns:
+                    data['volume'] = 0
+                
+                self.last_data = data
+                print(f"✅ Loaded {len(data)} rows using alternative method")
+                return data
+                
+            except Exception as e2:
+                print(f"❌ Alternative method also failed: {e2}")
+                raise
     
     def create_target(self, data, lookahead=1, threshold=0.0):
         """
@@ -254,7 +321,14 @@ class BLENNSWalkForward:
         # Drop NaN values
         data = data.dropna(subset=['target'])
         
-        print(f"✅ Created target: {data['target'].sum()} buy signals out of {len(data)} samples")
+        # Calculate class distribution
+        buy_signals = data['target'].sum()
+        total_samples = len(data)
+        
+        print(f"✅ Created target with lookahead={lookahead}")
+        print(f"   Buy signals: {buy_signals}/{total_samples} ({buy_signals/total_samples:.1%})")
+        print(f"   Sell signals: {total_samples - buy_signals}/{total_samples} ({(total_samples - buy_signals)/total_samples:.1%})")
+        
         return data
     
     def encode_candles(self, data, window_size=5, img_size=64, dpi=32):
@@ -290,48 +364,74 @@ class BLENNSWalkForward:
         encoded_images = []
         volumes = []
 
-        print(f"🖼️ Encoding {len(data) - window_size} candle images...")
+        print(f"🖼️ Encoding candlestick images (window={window_size})...")
+        
+        # Ensure we have enough data
+        if len(data) <= window_size:
+            raise ValueError(f"Need at least {window_size + 1} data points, but only have {len(data)}")
         
         for i in range(window_size, len(data)):
+            # Get window of data
             subset = data.iloc[i-window_size:i].copy()
-            subset = subset.reset_index(drop=True)
             
-            # Convert dates to matplotlib format
-            subset['date_num'] = np.arange(len(subset))
+            # Create sequential x-values for plotting
+            subset = subset.reset_index(drop=True)
+            subset['x_pos'] = np.arange(len(subset))
             
             # Create figure
             fig, ax = plt.subplots(figsize=(img_size/dpi, img_size/dpi), dpi=dpi)
             
+            # Prepare data for candlestick
+            candlestick_data = []
+            for idx, row in subset.iterrows():
+                candlestick_data.append([
+                    row['x_pos'],
+                    row['open'],
+                    row['high'],
+                    row['low'],
+                    row['close']
+                ])
+            
             # Plot candlestick
             candlestick_ohlc(
                 ax, 
-                subset[['date_num', 'open', 'high', 'low', 'close']].values,
+                candlestick_data,
                 width=0.6, 
                 colorup='green', 
                 colordown='red',
                 alpha=1.0
             )
             
-            # Format plot
+            # Format plot for clean image
+            ax.set_xlim(-0.5, window_size - 0.5)
+            
+            # Get y-axis limits from data
+            y_min = subset[['low']].min().min() * 0.99
+            y_max = subset[['high']].max().max() * 1.01
+            ax.set_ylim(y_min, y_max)
+            
+            # Remove axes and borders
+            ax.axis('off')
             ax.set_xticks([])
             ax.set_yticks([])
-            ax.spines['top'].set_visible(False)
-            ax.spines['right'].set_visible(False)
-            ax.spines['bottom'].set_visible(False)
-            ax.spines['left'].set_visible(False)
-            ax.set_facecolor('white')
+            
+            for spine in ax.spines.values():
+                spine.set_visible(False)
             
             # Save to buffer
             buf = io.BytesIO()
-            plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0, 
-                       facecolor='white', dpi=dpi)
+            plt.savefig(buf, format='png', 
+                       bbox_inches='tight', 
+                       pad_inches=0,
+                       facecolor='white',
+                       dpi=dpi)
             buf.seek(0)
             
             # Convert to array
             img = Image.open(buf).resize((img_size, img_size)).convert('RGB')
             encoded_images.append(np.array(img) / 255.0)
             
-            # Get volume
+            # Get volume for current candle (not the window)
             if 'volume' in data.columns:
                 volumes.append(float(data.iloc[i]['volume']))
             else:
@@ -340,10 +440,12 @@ class BLENNSWalkForward:
             plt.close(fig)
             
             # Progress indicator
-            if i % 100 == 0:
-                print(f"  Processed {i}/{len(data)} candles...")
+            if i % 50 == 0 and i > window_size:
+                print(f"  Processed {i-window_size}/{len(data)-window_size} images...")
 
-        print(f"✅ Encoded {len(encoded_images)} images")
+        print(f"✅ Encoded {len(encoded_images)} images of shape {encoded_images[0].shape}")
+        print(f"   Volume array shape: {len(volumes)}")
+        
         return np.array(encoded_images, dtype=np.float32), np.array(volumes, dtype=np.float32).reshape(-1, 1)
     
     def build_model(self, input_shape=(1, 64, 64, 3)):
@@ -361,14 +463,23 @@ class BLENNSWalkForward:
         """
         # Image processing branch
         img_input = Input(shape=input_shape)
+        
+        # First conv block
         x = TimeDistributed(Conv2D(32, (3, 3), activation='relu', padding='same'))(img_input)
         x = TimeDistributed(MaxPooling2D((2, 2)))(x)
-        x = TimeDistributed(Dropout(0.3))(x)
+        x = TimeDistributed(Dropout(0.2))(x)
+        
+        # Second conv block
         x = TimeDistributed(Conv2D(64, (3, 3), activation='relu', padding='same'))(x)
+        x = TimeDistributed(MaxPooling2D((2, 2)))(x)
+        x = TimeDistributed(Dropout(0.3))(x)
+        
+        # Third conv block
+        x = TimeDistributed(Conv2D(128, (3, 3), activation='relu', padding='same'))(x)
         x = TimeDistributed(MaxPooling2D((2, 2)))(x)
         x = TimeDistributed(Flatten())(x)
 
-        # Temporal processing
+        # Temporal processing with LSTM
         x = LSTM(64, return_sequences=True)(x)
         x = Dropout(0.4)(x)
         
@@ -379,26 +490,37 @@ class BLENNSWalkForward:
         # Volume input branch
         vol_input = Input(shape=(1,))
         vol_dense = Dense(16, activation='relu')(vol_input)
+        vol_dense = Dropout(0.2)(vol_dense)
 
         # Feature fusion
         x = concatenate([x, vol_dense])
 
-        # Prediction head
+        # Dense layers for prediction
+        x = Dense(64, activation='relu')(x)
+        x = Dropout(0.3)(x)
         x = Dense(32, activation='relu')(x)
         x = Dropout(0.2)(x)
         output = Dense(1, activation='sigmoid')(x)
 
+        # Create model
         model = Model(inputs=[img_input, vol_input], outputs=output)
+        
+        # Compile model
         model.compile(
             optimizer=Adam(learning_rate=0.001),
             loss='binary_crossentropy',
-            metrics=['accuracy', tf.keras.metrics.AUC(name='auc')]
+            metrics=['accuracy', 
+                    tf.keras.metrics.AUC(name='auc'),
+                    tf.keras.metrics.Precision(name='precision'),
+                    tf.keras.metrics.Recall(name='recall')]
         )
         
         print("✅ Model built successfully")
+        print(f"   Total parameters: {model.count_params():,}")
+        
         return model
     
-    def train_model(self, X_img, X_vol, y, n_splits=5, epochs=20, batch_size=32, validation_split=0.2):
+    def train_model(self, X_img, X_vol, y, n_splits=5, epochs=50, batch_size=32, validation_split=0.2):
         """
         Train model with walk-forward validation
         
@@ -423,31 +545,60 @@ class BLENNSWalkForward:
         --------
         dict with training metrics
         """
+        # Validate input shapes
         if len(X_img) != len(X_vol) or len(X_img) != len(y):
             raise ValueError(f"Data length mismatch: X_img={len(X_img)}, X_vol={len(X_vol)}, y={len(y)}")
         
         print(f"🏋️ Training model on {len(X_img)} samples...")
+        print(f"   Image shape: {X_img.shape}")
+        print(f"   Volume shape: {X_vol.shape}")
+        print(f"   Target shape: {y.shape}")
         
-        # Reshape images if needed
+        # Reshape images if needed (for single image per sample)
         if len(X_img.shape) == 4:  # (n_samples, height, width, channels)
             X_img = X_img.reshape(-1, 1, X_img.shape[1], X_img.shape[2], X_img.shape[3])
+            print(f"   Reshaped images to: {X_img.shape}")
         
         # Normalize volume
         X_vol = self.scaler.fit_transform(X_vol)
         
-        # Build model
-        self.model = self.build_model(input_shape=X_img.shape[1:])
+        # Build model if not already built
+        if self.model is None:
+            self.model = self.build_model(input_shape=X_img.shape[1:])
         
         # Time series cross-validation
         tscv = TimeSeriesSplit(n_splits=min(n_splits, len(X_img)//10))
-        metrics = {'val_acc': [], 'val_auc': [], 'val_loss': []}
+        print(f"   Using {tscv.n_splits}-fold time series cross-validation")
+        
+        metrics = {
+            'val_acc': [], 'val_auc': [], 'val_loss': [],
+            'val_precision': [], 'val_recall': [],
+            'train_acc': [], 'train_auc': [], 'train_loss': []
+        }
         
         for fold, (train_idx, val_idx) in enumerate(tscv.split(X_img), 1):
             print(f"\n📊 Fold {fold}/{tscv.n_splits}")
             print(f"   Train samples: {len(train_idx)}, Validation samples: {len(val_idx)}")
             
-            # Reset model for each fold
+            # Build fresh model for each fold
             self.model = self.build_model(input_shape=X_img.shape[1:])
+            
+            # Early stopping callback
+            early_stopping = tf.keras.callbacks.EarlyStopping(
+                monitor='val_loss',
+                patience=10,
+                restore_best_weights=True,
+                verbose=1
+            )
+            
+            # Reduce learning rate on plateau
+            reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
+                monitor='val_loss',
+                factor=0.5,
+                patience=5,
+                min_lr=1e-6,
+                verbose=1
+            )
             
             # Train
             history = self.model.fit(
@@ -457,35 +608,47 @@ class BLENNSWalkForward:
                 epochs=epochs,
                 batch_size=batch_size,
                 verbose=1,
-                callbacks=[
-                    tf.keras.callbacks.EarlyStopping(
-                        monitor='val_loss',
-                        patience=5,
-                        restore_best_weights=True
-                    ),
-                    tf.keras.callbacks.ReduceLROnPlateau(
-                        monitor='val_loss',
-                        factor=0.5,
-                        patience=3,
-                        min_lr=1e-6
-                    )
-                ]
+                callbacks=[early_stopping, reduce_lr]
             )
             
             # Store metrics
-            metrics['val_acc'].append(history.history['val_accuracy'][-1])
-            metrics['val_auc'].append(history.history['val_auc'][-1])
-            metrics['val_loss'].append(history.history['val_loss'][-1])
+            if 'val_accuracy' in history.history:
+                metrics['val_acc'].append(history.history['val_accuracy'][-1])
+            if 'val_auc' in history.history:
+                metrics['val_auc'].append(history.history['val_auc'][-1])
+            if 'val_loss' in history.history:
+                metrics['val_loss'].append(history.history['val_loss'][-1])
+            if 'val_precision' in history.history:
+                metrics['val_precision'].append(history.history['val_precision'][-1])
+            if 'val_recall' in history.history:
+                metrics['val_recall'].append(history.history['val_recall'][-1])
+            
+            # Store training metrics
+            if 'accuracy' in history.history:
+                metrics['train_acc'].append(history.history['accuracy'][-1])
+            if 'auc' in history.history:
+                metrics['train_auc'].append(history.history['auc'][-1])
+            if 'loss' in history.history:
+                metrics['train_loss'].append(history.history['loss'][-1])
             
             self.history = history
         
+        # Print summary
         print(f"\n✅ Training complete!")
-        print(f"   Average Validation Accuracy: {np.mean(metrics['val_acc']):.3f}")
-        print(f"   Average Validation AUC: {np.mean(metrics['val_auc']):.3f}")
+        print(f"\n📈 Validation Metrics (Average):")
+        if metrics['val_acc']:
+            print(f"   Accuracy: {np.mean(metrics['val_acc']):.3f} (±{np.std(metrics['val_acc']):.3f})")
+        if metrics['val_auc']:
+            print(f"   AUC: {np.mean(metrics['val_auc']):.3f} (±{np.std(metrics['val_auc']):.3f})")
+        if metrics['val_precision']:
+            print(f"   Precision: {np.mean(metrics['val_precision']):.3f} (±{np.std(metrics['val_precision']):.3f})")
+        if metrics['val_recall']:
+            print(f"   Recall: {np.mean(metrics['val_recall']):.3f} (±{np.std(metrics['val_recall']):.3f})")
         
+        self.trained = True
         return metrics
     
-    def predict_next_day(self, train_if_missing=True):
+    def predict_next_day(self, train_if_missing=True, confidence_threshold=0.6):
         """
         Generate prediction for the next trading day
         
@@ -493,28 +656,44 @@ class BLENNSWalkForward:
         -----------
         train_if_missing : bool
             Train model if not already trained
+        confidence_threshold : float
+            Minimum confidence to trust prediction
             
         Returns:
         --------
-        str: 'Buy' or 'Sell' recommendation
+        tuple: (signal, probability, confidence)
         """
         if self.last_data is None:
             print("⚠️ No data available. Fetching recent data...")
             self.last_data = self.get_data(start_date="2023-01-01")
         
         # Prepare data
-        data_with_target = self.create_target(self.last_data)
-        images, volumes = self.encode_candles(data_with_target)
+        data_with_target = self.create_target(self.last_data, lookahead=1)
+        
+        # Check if we have enough data
+        if len(data_with_target) < 10:
+            raise ValueError(f"Not enough data for prediction. Need at least 10 samples, have {len(data_with_target)}")
+        
+        # Encode candles
+        window_size = min(5, len(data_with_target) - 1)  # Adjust window size if needed
+        images, volumes = self.encode_candles(data_with_target, window_size=window_size)
         
         # Reshape for model
         X_img = images.reshape(-1, 1, images.shape[1], images.shape[2], images.shape[3])
         X_vol = self.scaler.fit_transform(volumes)
-        y = data_with_target['target'].iloc[5:].values
+        y = data_with_target['target'].iloc[window_size:].values
+        
+        # Ensure shapes match
+        if len(X_img) != len(y):
+            min_len = min(len(X_img), len(y))
+            X_img = X_img[:min_len]
+            X_vol = X_vol[:min_len]
+            y = y[:min_len]
         
         # Train if needed
         if self.model is None and train_if_missing:
             print("🤖 Model not trained. Starting training...")
-            self.train_model(X_img, X_vol, y, n_splits=3, epochs=10)
+            self.train_model(X_img, X_vol, y, n_splits=min(3, len(X_img)//20), epochs=20)
         elif self.model is None:
             raise ValueError("Model not trained. Call train_model() first or set train_if_missing=True")
         
@@ -525,22 +704,156 @@ class BLENNSWalkForward:
         prediction_prob = self.model.predict([last_img, last_vol], verbose=0)[0][0]
         confidence = abs(prediction_prob - 0.5) * 2  # Convert to 0-1 scale
         
+        # Determine signal
+        if prediction_prob > 0.5:
+            signal = "Buy"
+        else:
+            signal = "Sell"
+        
         print(f"\n📈 Prediction Results:")
+        print(f"   Signal: {signal}")
         print(f"   Probability: {prediction_prob:.3f}")
         print(f"   Confidence: {confidence:.1%}")
         
-        if prediction_prob > 0.5:
-            return "Buy", prediction_prob, confidence
-        else:
-            return "Sell", prediction_prob, confidence
+        if confidence < confidence_threshold:
+            print(f"   ⚠️ Low confidence prediction (below {confidence_threshold:.0%} threshold)")
+            signal = f"{signal} (Low Confidence)"
+        
+        return signal, prediction_prob, confidence
+    
+    def predict_batch(self, X_img, X_vol):
+        """
+        Make predictions on a batch of data
+        
+        Parameters:
+        -----------
+        X_img : numpy.ndarray
+            Batch of image data
+        X_vol : numpy.ndarray
+            Batch of volume data
+            
+        Returns:
+        --------
+        numpy.ndarray: Predictions
+        """
+        if self.model is None:
+            raise ValueError("Model not trained. Call train_model() first")
+        
+        # Reshape if needed
+        if len(X_img.shape) == 4:
+            X_img = X_img.reshape(-1, 1, X_img.shape[1], X_img.shape[2], X_img.shape[3])
+        
+        # Normalize volume
+        X_vol = self.scaler.transform(X_vol)
+        
+        # Make predictions
+        predictions = self.model.predict([X_img, X_vol], verbose=0)
+        
+        return predictions
+    
+    def evaluate_model(self, X_img, X_vol, y):
+        """
+        Evaluate model performance
+        
+        Parameters:
+        -----------
+        X_img : numpy.ndarray
+            Image data
+        X_vol : numpy.ndarray
+            Volume data
+        y : numpy.ndarray
+            True labels
+            
+        Returns:
+        --------
+        dict: Evaluation metrics
+        """
+        if self.model is None:
+            raise ValueError("Model not trained. Call train_model() first")
+        
+        # Reshape if needed
+        if len(X_img.shape) == 4:
+            X_img = X_img.reshape(-1, 1, X_img.shape[1], X_img.shape[2], X_img.shape[3])
+        
+        # Normalize volume
+        X_vol = self.scaler.transform(X_vol)
+        
+        # Evaluate
+        evaluation = self.model.evaluate([X_img, X_vol], y, verbose=0)
+        
+        # Get metric names
+        metric_names = self.model.metrics_names
+        
+        # Create results dictionary
+        results = dict(zip(metric_names, evaluation))
+        
+        print("📊 Model Evaluation:")
+        for metric, value in results.items():
+            print(f"   {metric}: {value:.4f}")
+        
+        return results
     
     def save_model(self, filepath='blenns_model.h5'):
         """Save trained model"""
         if self.model:
             self.model.save(filepath)
             print(f"✅ Model saved to {filepath}")
+            return True
+        else:
+            print("⚠️ No model to save")
+            return False
     
     def load_model(self, filepath='blenns_model.h5'):
         """Load trained model"""
-        self.model = tf.keras.models.load_model(filepath)
-        print(f"✅ Model loaded from {filepath}")
+        try:
+            self.model = tf.keras.models.load_model(filepath)
+            print(f"✅ Model loaded from {filepath}")
+            self.trained = True
+            return True
+        except Exception as e:
+            print(f"❌ Failed to load model: {e}")
+            return False
+    
+    def get_feature_importance(self, X_img_sample, X_vol_sample):
+        """
+        Get feature importance using gradient-based method
+        
+        Parameters:
+        -----------
+        X_img_sample : numpy.ndarray
+            Sample image data
+        X_vol_sample : numpy.ndarray
+            Sample volume data
+            
+        Returns:
+        --------
+        dict: Feature importance scores
+        """
+        if self.model is None:
+            raise ValueError("Model not trained")
+        
+        # Ensure correct shape
+        if len(X_img_sample.shape) == 4:
+            X_img_sample = X_img_sample.reshape(1, 1, X_img_sample.shape[1], 
+                                               X_img_sample.shape[2], X_img_sample.shape[3])
+        
+        X_vol_sample = self.scaler.transform(X_vol_sample.reshape(-1, 1))
+        
+        # Get gradients
+        with tf.GradientTape() as tape:
+            tape.watch([X_img_sample, X_vol_sample])
+            predictions = self.model([X_img_sample, X_vol_sample])
+        
+        gradients = tape.gradient(predictions, [X_img_sample, X_vol_sample])
+        
+        # Calculate importance scores
+        img_grad = np.mean(np.abs(gradients[0].numpy()))
+        vol_grad = np.mean(np.abs(gradients[1].numpy()))
+        
+        importance = {
+            'image_features': float(img_grad),
+            'volume': float(vol_grad),
+            'image_to_volume_ratio': float(img_grad / vol_grad) if vol_grad != 0 else float('inf')
+        }
+        
+        return importance
