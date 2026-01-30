@@ -62,7 +62,7 @@ Blend Neural Networks (BLENNs) is a cutting-edge trading prediction system that 
 ### Basic Prediction
 
 ```python
-from blenns_wf import Blended-Neural-Networks-BLENNs-
+from blenns_walk_forward import Blended-Neural-Networks-BLENNs-
 
 # Initialize with any financial instrument
 trader = BLENNSWalkForward("AAPL")
@@ -111,8 +111,8 @@ trader = BLENNSWalkForward("BTC-USD", bfc_params=bfc_params)
 
 ### Complete Workflow with Visualizations
 ```
-from blenns_wf import Blended-Neural-Networks-BLENNs-
-from blenns_wf.utils import visualize_candles, explain_model_with_shap, plot_training_curves, plot_uncertainty_candle, monte_carlo_predict
+from blenns_walk_forward import Blended-Neural-Networks-BLENNs-
+from blenns_walk_forward.utils import visualize_candles, explain_model_with_shap, plot_training_curves, plot_uncertainty_candle, monte_carlo_predict
 import matplotlib.pyplot as plt
 import numpy as np
 
