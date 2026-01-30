@@ -40,14 +40,10 @@ Blend Neural Networks (BLENNs) is a cutting-edge trading prediction system that 
 
 ```bash
 # Clone the repository
-git clone https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-.git
-cd Blended-Neural-Networks-BLENNs-
-
-# Install the package
-pip install -e .
-
-# Install dependencies
-pip install yfinance tensorflow shap mplfinance pillow scikit-learn matplotlib
+!pip install yfinance tensorflow shap mplfinance pillow
+!git clone https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-.git
+%cd Blended-Neural-Networks-BLENNs-
+!pip install -e .
 ```
 
 ### Google Colab Installation
