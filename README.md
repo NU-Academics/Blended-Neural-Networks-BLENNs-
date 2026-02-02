@@ -76,6 +76,7 @@ print(f"📈 Next day prediction: {prediction}")
 ### Multi-Asset Analysis
 
 ```python
+from blenns_walk_forward import BLENNSWalkForward
 # Analyze multiple markets simultaneously
 symbols = ["AAPL", "BTC-USD", "EURUSD=X", "GC=F", "^SPX"]
 
