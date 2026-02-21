@@ -1,5 +1,5 @@
 # Blend Neural Networks (BLENNs) Model.
-## Interact with BlennsForecaster https://blennsforecaster.com/
+### Interact with BlennsForecaster https://blennsforecaster.com
 
 <div align="center">
 
