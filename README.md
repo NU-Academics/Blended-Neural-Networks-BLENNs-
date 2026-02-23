@@ -700,7 +700,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **GitHub Issues**: [Report bugs & request features](https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-.git/issues)
 - **Discussions**: [Join the community](https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-.git/discussions)
-- **Email**: support@example.com
+- **Email**: info@blennsforecaster.com
 
 ## 🙏 Acknowledgments
 
