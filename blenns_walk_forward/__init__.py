@@ -11,9 +11,6 @@ Original implementation from BLENNS Original Notebook:
 """
 
 from .core import BLENNSWalkForward
-from .bfc import compute_bfc, exponential_moving_average, kalman_filter
-from .data import get_yfinance_data, encode_candle_chart, normalize_data
-from .model import blenns_trading_model
 from .utils import (
     visualize_candles,
     plot_training_curves,
@@ -23,7 +20,9 @@ from .utils import (
     monte_carlo_predict,
     compute_atr,
     atr_multipliers,
-    plot_predicted_candle
+    plot_predicted_candle,
+    plot_confusion_matrix,
+    normalize_data
 )
 
 __version__ = "2.0.0"
@@ -32,29 +31,18 @@ __all__ = [
     # Core classes
     'BLENNSWalkForward',
     
-    # BFC filter functions
-    'compute_bfc',
-    'exponential_moving_average',
-    'kalman_filter',
-    
-    # Data handling
-    'get_yfinance_data',
-    'encode_candle_chart',
-    'normalize_data',
-    
-    # Model architecture
-    'blenns_trading_model',
-    
     # Visualization utilities
     'visualize_candles',
     'plot_training_curves',
     'plot_roc_curve',
     'plot_uncertainty_candle',
     'plot_predicted_candle',
+    'plot_confusion_matrix',
     
     # Analysis utilities
     'explain_model_with_shap',
     'monte_carlo_predict',
     'compute_atr',
-    'atr_multipliers'
+    'atr_multipliers',
+    'normalize_data'
 ]
