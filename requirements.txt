@@ -1,9 +1,111 @@
-numpy>=1.21.0
-pandas>=1.3.0
-yfinance>=0.2.0
-matplotlib>=3.5.0
-shap>=0.41.0
-tensorflow>=2.10.0
-mplfinance>=0.12.0
-Pillow>=9.0.0
-scikit-learn>=1.0.0
+# ============================================================
+# BLENNS Walk-Forward Trading System
+# Requirements File - BLENNS Original Implementation
+# ============================================================
+# Compatible with: Python 3.8 - 3.11
+# Last Updated: 2026-03-21
+# ============================================================
+
+# ============================================================
+# CORE DEPENDENCIES
+# ============================================================
+
+# Data manipulation and analysis
+numpy>=1.21.0,<1.25.0          # NumPy 1.25+ may have compatibility issues
+pandas>=1.3.0,<2.0.0           # Pandas 2.0 introduces API changes
+scikit-learn>=1.0.0,<1.3.0     # For preprocessing and metrics
+
+# ============================================================
+# DATA FETCHING
+# ============================================================
+
+yfinance>=0.2.0,<0.3.0         # Yahoo Finance API (supports stocks, crypto, forex, futures)
+
+# ============================================================
+# DEEP LEARNING FRAMEWORK
+# ============================================================
+
+tensorflow>=2.10.0,<2.15.0     # TensorFlow 2.x with Keras (CNN+LSTM+Attention)
+# Note: TensorFlow 2.15+ may require updated CUDA versions
+
+# ============================================================
+# VISUALIZATION
+# ============================================================
+
+matplotlib>=3.5.0,<3.8.0       # Core plotting and candlestick charts
+mplfinance>=0.12.0,<0.13.0     # Candlestick charting library
+Pillow>=9.0.0,<10.0.0          # Image processing for candle encoding
+
+# ============================================================
+# MODEL INTERPRETABILITY
+# ============================================================
+
+shap>=0.41.0,<0.43.0           # SHAP for model explainability (GradientExplainer)
+
+# ============================================================
+# OPTIONAL BUT RECOMMENDED
+# ============================================================
+
+# Jupyter notebook support (for running the original Colab notebook)
+jupyter>=1.0.0,<2.0.0
+ipywidgets>=7.6.0,<8.0.0       # Interactive widgets for notebook
+
+# Progress bars and logging
+tqdm>=4.64.0,<5.0.0            # For training progress visualization
+
+# Statistical analysis (for backtesting)
+scipy>=1.8.0,<1.10.0           # Additional statistical functions
+
+# ============================================================
+# DEVELOPMENT DEPENDENCIES (not required for runtime)
+# ============================================================
+
+# For testing
+pytest>=7.0.0,<8.0.0
+pytest-cov>=4.0.0,<5.0.0
+
+# For code formatting and linting
+black>=22.0.0,<24.0.0
+flake8>=5.0.0,<6.0.0
+mypy>=0.990,<1.0.0
+
+# For documentation
+sphinx>=5.0.0,<7.0.0
+sphinx-rtd-theme>=1.0.0,<2.0.0
+
+# ============================================================
+# PLATFORM-SPECIFIC NOTES
+# ============================================================
+
+# For CUDA 11.2+ GPU acceleration (optional):
+# tensorflow-gpu is included in tensorflow>=2.10.0
+
+# For Apple Silicon (M1/M2) Macs:
+# tensorflow-macos and tensorflow-metal are alternatives
+# Uncomment below if using Apple Silicon:
+# tensorflow-macos>=2.10.0
+# tensorflow-metal>=0.6.0
+
+# ============================================================
+# MINIMAL INSTALL (core only)
+# ============================================================
+# For a minimal installation, use:
+# pip install numpy pandas yfinance tensorflow matplotlib mplfinance Pillow scikit-learn shap
+
+# ============================================================
+# FULL INSTALL (with all optional dependencies)
+# ============================================================
+# For full installation with all features, use:
+# pip install -r requirements.txt
+
+# ============================================================
+# COMPATIBILITY MATRIX
+# ============================================================
+# | Package       | Min Version | Max Version | Reason for upper bound      |
+# |---------------|-------------|-------------|-----------------------------|
+# | numpy         | 1.21.0      | <1.25.0     | TensorFlow compatibility    |
+# | pandas        | 1.3.0       | <2.0.0      | API stability               |
+# | tensorflow    | 2.10.0      | <2.15.0     | CUDA compatibility          |
+# | shap          | 0.41.0      | <0.43.0     | API stability               |
+# | matplotlib    | 3.5.0       | <3.8.0      | mplfinance compatibility    |
+# ============================================================
