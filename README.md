@@ -1,4 +1,3 @@
-Here's the corrected `README.md` with all code blocks fixed to match the BLENNS Original model implementation:
 
 ```markdown
 # Blend Neural Networks (BLENNs) Model.
@@ -17,6 +16,7 @@ Here's the corrected `README.md` with all code blocks fixed to match the BLENNS 
 *Revolutionizing market analysis with Blenns Filter Candles and deep learning*
 
 </div>
+```
 
 ## 🚀 Overview
 
