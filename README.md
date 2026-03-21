@@ -3,8 +3,7 @@
 # Blend Neural Networks (BLENNs) Model.
 ### Interact with BlennsForecaster https://blennsforecaster.com
 
-```markdown
-<div align="center">
+
 
 ![BLENNS Banner](https://via.placeholder.com/800x200/2D3748/FFFFFF?text=BLENNS+Walk+Forward+Trading+System)
 
@@ -16,8 +15,6 @@
 
 *Revolutionizing market analysis with Blenns Filter Candles and deep learning*
 
-</div>
-```
 
 ## 🚀 Overview
 
