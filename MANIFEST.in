@@ -1,4 +1,55 @@
+# BLENNS Walk Forward Trading System
+# MANIFEST.in - Package distribution configuration
+
+# Core package files
 include LICENSE
 include README.md
 include requirements.txt
+include pyproject.toml
+include setup.py
+include setup.cfg
+
+# Include all Python source files
 recursive-include blenns_walk_forward *.py
+recursive-include blenns_walk_forward *.pyx
+recursive-include blenns_walk_forward *.pxd
+
+# Include data files and resources
+recursive-include blenns_walk_forward *.png
+recursive-include blenns_walk_forward *.jpg
+recursive-include blenns_walk_forward *.csv
+recursive-include blenns_walk_forward *.json
+recursive-include blenns_walk_forward *.h5
+recursive-include blenns_walk_forward *.weights
+
+# Include example notebooks and documentation
+recursive-include examples *.ipynb
+recursive-include examples *.py
+recursive-include docs *.md
+recursive-include docs *.rst
+
+# Include test files
+recursive-include tests *.py
+recursive-include tests *.csv
+
+# Include configuration and metadata
+include .gitignore
+include .pre-commit-config.yaml
+include CODE_OF_CONDUCT.md
+include CONTRIBUTING.md
+include CHANGELOG.md
+
+# Exclude unnecessary files
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude *.so
+global-exclude .DS_Store
+global-exclude *.egg-info
+global-exclude .pytest_cache
+global-exclude .coverage
+global-exclude htmlcov
+global-exclude .tox
+global-exclude .mypy_cache
+global-exclude .vscode
+global-exclude .idea
+global-exclude *.ipynb_checkpoints
