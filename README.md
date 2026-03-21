@@ -1,3 +1,6 @@
+Here's the corrected `README.md` with all code blocks fixed to match the BLENNS Original model implementation:
+
+```markdown
 # Blend Neural Networks (BLENNs) Model.
 ### Interact with BlennsForecaster https://blennsforecaster.com
 
@@ -41,10 +44,9 @@ Blend Neural Networks (BLENNs) is a cutting-edge trading prediction system that 
 
 ```bash
 # Clone the repository
-!pip install yfinance tensorflow shap mplfinance pillow
-!git clone https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-.git
-%cd Blended-Neural-Networks-BLENNs-
-!pip install -e .
+git clone https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-.git
+cd Blended-Neural-Networks-BLENNs-
+pip install -e .
 ```
 
 ### Google Colab Installation
@@ -55,7 +57,6 @@ Blend Neural Networks (BLENNs) is a cutting-edge trading prediction system that 
 !git clone https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-.git
 %cd Blended-Neural-Networks-BLENNs-
 !pip install -e .
-
 ```
 
 ## 🎯 Quick Start
@@ -63,28 +64,29 @@ Blend Neural Networks (BLENNs) is a cutting-edge trading prediction system that 
 ### Basic Prediction
 
 ```python
-
 from blenns_walk_forward import BLENNSWalkForward
 
 # Initialize with any financial instrument
-trader = BLENNSWalkForward("AAPL")
+trader = BLENNSWalkForward(symbol="AAPL")
 
 # Get instant prediction
-prediction = trader.predict_next_day()
-print(f"📈 Next day prediction: {prediction}")
+result = trader.predict_next_day()
+print(f"📈 Next day prediction: {result['direction']}")
+print(f"📊 Confidence: {result['confidence']:.2%}")
 ```
 
 ### Multi-Asset Analysis
 
 ```python
 from blenns_walk_forward import BLENNSWalkForward
+
 # Analyze multiple markets simultaneously
 symbols = ["AAPL", "BTC-USD", "EURUSD=X", "GC=F", "^SPX"]
 
 for symbol in symbols:
-    trader = BLENNSWalkForward(symbol)
-    prediction = trader.predict_next_day()
-    print(f"🎯 {symbol}: {prediction}")
+    trader = BLENNSWalkForward(symbol=symbol)
+    result = trader.predict_next_day()
+    print(f"🎯 {symbol}: {result['direction']} ({result['confidence']:.1%} conf)")
 ```
 
 ## 📊 Supported Markets
@@ -105,17 +107,28 @@ for symbol in symbols:
 # Advanced BFC parameter tuning
 bfc_params = {
     'alpha': 0.15,     # EMA smoothing factor (0.1-0.3)
-    'R': 0.05**2,      # Kalman measurement noise
-    'Q': 1e-6          # Kalman process noise
+    'R': 0.01,         # Kalman measurement noise
+    'Q': 1e-5          # Kalman process noise
 }
 
-trader = BLENNSWalkForward("BTC-USD", bfc_params=bfc_params)
+trader = BLENNSWalkForward(symbol="BTC-USD", bfc_params=bfc_params)
 ```
 
 ### Complete Workflow with Visualizations
-```
-from blenns_walk_forward import Blended-Neural-Networks-BLENNs-
-from blenns_walk_forward.utils import visualize_candles, explain_model_with_shap, plot_training_curves, plot_uncertainty_candle, monte_carlo_predict
+
+```python
+from blenns_walk_forward import BLENNSWalkForward
+from blenns_walk_forward.utils import (
+    visualize_candles, 
+    explain_model_with_shap, 
+    plot_training_curves, 
+    plot_uncertainty_candle,
+    monte_carlo_predict,
+    plot_roc_curve,
+    plot_confusion_matrix,
+    compute_atr,
+    plot_predicted_candle
+)
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -124,13 +137,13 @@ def enhanced_prediction_visualization(prediction, confidence):
     fig, ax = plt.subplots(figsize=(4, 6))
     
     # Determine candle color and position
-    if prediction == "Buy":
+    if prediction == "Bullish":
         color = 'green'
-        body_height = confidence * 0.8  # Scale confidence to candle height
+        body_height = confidence * 0.8
         body_bottom = 0.5 - body_height/2
         wick_top = 0.5 + body_height/2 + 0.1
         wick_bottom = 0.5 - body_height/2 - 0.1
-    else:  # Sell
+    else:  # Bearish
         color = 'red'
         body_height = confidence * 0.8
         body_bottom = 0.5 - body_height/2
@@ -152,14 +165,15 @@ def enhanced_prediction_visualization(prediction, confidence):
     ax.text(0.5, 0.9, f"{prediction.upper()}", ha='center', va='center', 
             fontsize=16, fontweight='bold', color=color)
     ax.text(0.5, 0.1, f"Confidence: {confidence:.1%}", ha='center', va='center', 
-            fontsize=12, color='black')
+            fontsize=12, color='white')
     
-    plt.title("BLENNS Prediction Candle", fontsize=14, pad=20)
+    plt.title("BLENNS Prediction Candle", fontsize=14, pad=20, color='white')
+    fig.patch.set_facecolor("#0a0a0f")
     plt.tight_layout()
     plt.show()
 
 # Initialize with custom parameters
-trader = BLENNSWalkForward("AAPL")
+trader = BLENNSWalkForward(symbol="AAPL")
 
 # 1. Data Acquisition & BFC Processing
 print("📥 Fetching and processing data...")
@@ -168,49 +182,39 @@ print(f"📊 Data range: {data['date'].min().date()} to {data['date'].max().date
 
 # 2. Target Creation
 data = trader.create_target(data)
-print(f"🎯 Target distribution: {data['target'].value_counts().to_dict()}")
+print(f"🎯 Target distribution: Bullish: {data['target'].sum()}, Bearish: {len(data)-data['target'].sum()}")
 
-# 3. Candlestick Image Generation
+# 3. Prepare Inputs (Candlestick Image Generation)
 print("🖼️ Encoding BFC candlesticks...")
-images, volumes = trader.encode_candles(data)
-print(f"Generated {len(images)} candlestick images")
+X_img, X_vol, y = trader.prepare_inputs(data)
+print(f"Generated {len(X_img)} candlestick images")
 
 # 4. Visualize Processed Candles
 print("👀 Displaying BFC-processed candles...")
-visualize_candles(images[:4], n=4)
+visualize_candles(X_img[:, 0, :, :, :], n=4)
 
 # 5. Model Training
 print("🤖 Training BLENNS model...")
-X_img = images.reshape(-1, 1, 64, 64, 3)
-X_vol = trader.scaler.fit_transform(volumes)
-y = data['target'].iloc[5:].values
-
-metrics = trader.train_model(X_img, X_vol, y, n_splits=3, epochs=30)
+metrics = trader.train_model(n_splits=3, epochs=30)
 
 # 6. Generate Prediction with Confidence
 print("🔮 Generating prediction...")
-prediction = trader.predict_next_day(train_if_missing=False)
+result = trader.predict_next_day(train_if_missing=False)
 
-# Calculate confidence from model prediction
-last_img, last_vol = X_img[-1:], X_vol[-1:]
-raw_prediction = trader.model.predict([last_img, last_vol], verbose=0)[0][0]
-confidence = raw_prediction if prediction == "Buy" else 1 - raw_prediction
-
-print(f"\n🎯 FINAL PREDICTION: {prediction}")
-print(f"📊 Confidence: {confidence:.1%}")
-print(f"🔢 Raw Probability: {raw_prediction:.3f}")
+print(f"\n🎯 FINAL PREDICTION: {result['direction']}")
+print(f"📊 Confidence: {result['confidence']:.1%}")
+print(f"🔢 Raw Probability: {result['mean']:.3f} ± {result['std']:.3f}")
 
 # 7. Display Visual Prediction Candle
 print("\n🕯️ Generating prediction candle...")
-enhanced_prediction_visualization(prediction, confidence)
+enhanced_prediction_visualization(result['direction'], result['confidence'])
 
 # 8. Uncertainty Analysis
 print("📈 Calculating prediction uncertainty...")
-mc_predictions = monte_carlo_predict(trader.model, last_img, last_vol, n_samples=50)
-plot_uncertainty_candle(mc_predictions)
+plot_uncertainty_candle(result['predictions'])
 
 # 9. Model Explanations (if enough samples)
-if len(X_img) >= 2:
+if len(X_img) >= 50:
     print("🔍 Generating SHAP explanations...")
     explain_model_with_shap(trader.model, X_img, X_vol)
 else:
@@ -220,6 +224,7 @@ print("\n" + "="*50)
 print("✅ ANALYSIS COMPLETE!")
 print("="*50)
 ```
+
 ## 🏗️ System Architecture
 
 ### BFC Processing Pipeline
@@ -241,6 +246,7 @@ print("="*50)
 - **Uncertainty**: Monte Carlo dropout (100 samples)
 
 ## 🏗️ BLENNS Model Architecture
+
 ```mermaid
 graph TD
     %% Input Layer
@@ -280,7 +286,7 @@ graph TD
     U --> V[Output Layer];
     
     %% Performance Output
-    V --> W[Binary Prediction<br/>Buy/Sell];
+    V --> W[Binary Prediction<br/>Bullish/Bearish];
     W --> X[Sharpe Ratio: 28.39];
     W --> Y[Accuracy: 95.45%];
     W --> Z[Excess Return: +1.87%];
@@ -290,6 +296,7 @@ graph TD
     Y --> BB[Diebold-Mariano Test<br/>p = 0.0000];
     Z --> CC[Walk-Forward Validation<br/>5-Fold];
 ```
+
 ## 🔧 Detailed Component Specifications
 
 ### 1. **Input Layer**
@@ -312,8 +319,8 @@ BFC_Stages = {
         "output": ["HA_Open", "HA_High", "HA_Low", "HA_Close"]
     },
     "Kalman_Filter": {
-        "R": 0.1**2,  # Measurement noise
-        "Q": 1e-5,    # Process noise
+        "R": 0.01,     # Measurement noise
+        "Q": 1e-5,     # Process noise
         "purpose": "Optimal state estimation"
     }
 }
@@ -324,14 +331,13 @@ BFC_Stages = {
 CNN_Architecture = {
     "Input_Shape": (1, 64, 64, 3),
     "Layers": [
-        "TimeDistributed(Conv2D(32, (3,3), activation='relu'))",
-        "TimeDistributed(MaxPooling2D(2,2))",
+        "TimeDistributed(Conv2D(32, (3,3), activation='relu', padding='same'))",
+        "TimeDistributed(MaxPooling2D((2,2)))",
         "TimeDistributed(Dropout(0.3))",
-        "TimeDistributed(Conv2D(64, (3,3), activation='relu'))", 
-        "TimeDistributed(MaxPooling2D(2,2))",
+        "TimeDistributed(Conv2D(64, (3,3), activation='relu', padding='same'))", 
+        "TimeDistributed(MaxPooling2D((2,2)))",
         "TimeDistributed(Flatten())"
-    ],
-    "Output_Features": 4096  # 64×64→flattened features
+    ]
 }
 ```
 
@@ -346,7 +352,7 @@ Temporal_Block = {
     "Attention_Mechanism": {
         "type": "Self-Attention",
         "purpose": "Focus on relevant time steps",
-        "operation": "Attention(query, key, value)"
+        "operation": "Attention([x, x])"
     }
 }
 ```
@@ -356,14 +362,14 @@ Temporal_Block = {
 Fusion_Output = {
     "Feature_Concatenation": {
         "inputs": ["CNN_LSTM_Features", "Normalized_Volume"],
-        "operation": "tf.keras.layers.concatenate"
+        "operation": "concatenate"
     },
     "Dense_Layers": [
         "Dense(32, activation='relu')",
         "Dropout(0.2)",
         "Dense(1, activation='sigmoid')"
     ],
-    "Output": "Binary classification (0=Sell, 1=Buy)"
+    "Output": "Binary classification (0=Bearish, 1=Bullish)"
 }
 ```
 
@@ -371,7 +377,7 @@ Fusion_Output = {
 
 | Component | Parameters | Output Shape | Purpose |
 |-----------|------------|--------------|---------|
-| **BFC Processing** | α=0.2, R=0.1², Q=1e-5 | 64×64×3 | Noise reduction & trend enhancement |
+| **BFC Processing** | α=0.2, R=0.01, Q=1e-5 | 64×64×3 | Noise reduction & trend enhancement |
 | **CNN Encoder** | 32→64 filters, 3×3 kernels | 4096 features | Spatial pattern recognition |
 | **LSTM Temporal** | 64 units, return_sequences=True | (None, 64) | Sequential dependency modeling |
 | **Attention** | Self-attention mechanism | (None, 64) | Feature importance weighting |
@@ -388,7 +394,7 @@ Fusion_Output = {
 5. TEMPORAL_MODELING → LSTM + Attention sequences  
 6. MULTI-MODAL_FUSION → Image features + Volume data
 7. PREDICTION_HEAD → Dense layers → Sigmoid output
-8. CONFIDENCE_SCORING → Probability calibration
+8. CONFIDENCE_SCORING → Probability calibration with MC Dropout
 ```
 
 ## 🎯 Key Architectural Innovations
@@ -424,6 +430,8 @@ Context Vector: ∑(weights × values)
 - **Feature Concatenation**: Preserves both spatial and volume information
 - **Dropout Regularization**: Prevents overfitting (0.3 CNN, 0.4 LSTM, 0.2 Dense)
 - **Walk-Forward Validation**: Ensures temporal consistency in testing
+- **Monte Carlo Dropout**: Provides uncertainty estimates at inference
+
 ---
 
 **Architecture Summary**: BLENNS architecture achieves **95.45% accuracy** with 28.39 Sharpe Ratio, validated by rigorous statistical testing by combining the strengths of signal processing (BFC), computer vision (CNN), sequential modeling (LSTM), and attention mechanisms in a carefully engineered multi-modal framework.
@@ -498,7 +506,7 @@ Context Vector: ∑(weights × values)
 ├── Relative vs ARIMA: +113.77% improvement
 └── Sharpe Ratio: 28.39 (Exceptional)
 
-🎯 FINAL PREDICTION: BUY (Confidence: 95.55%)
+🎯 FINAL PREDICTION: Bullish (Confidence: 95.55%)
 ```
 
 ### Key Performance Insights
@@ -510,8 +518,8 @@ Context Vector: ∑(weights × values)
 
 2. **Practical Trading Value:**
    - 28.39 Sharpe Ratio indicates excellent risk-adjusted returns
-   +1.87% excess returns over buy-and-hold strategy
-   Near-perfect 97.98% directional accuracy
+   - +1.87% excess returns over buy-and-hold strategy
+   - Near-perfect 97.98% directional accuracy
 
 3. **Technical Excellence:**
    - BFC processing provides 50%+ accuracy improvement over raw data models
@@ -542,7 +550,7 @@ The demonstrated 95.45% accuracy on AAPL represents typical performance across l
 ---
 
 *Note: All performance results are based on rigorous walk-forward validation with 2015-2025 data, ensuring real-world applicability and preventing look-ahead bias. Statistical significance confirmed at p < 0.0001 level.*
-```
+
 ## 🔍 Model Interpretability
 
 ### SHAP Feature Analysis
@@ -564,13 +572,14 @@ The system provides detailed feature importance analysis:
 ```python
 bfc_params = {
     'alpha': 0.2,      # EMA smoothing (0.1 = heavy, 0.3 = light)
-    'R': 0.1**2,       # Measurement noise variance
+    'R': 0.01,         # Measurement noise variance
     'Q': 1e-5          # Process noise variance
 }
 ```
 
 ### Training Parameters
 ```python
+# Configured in BLENNSWalkForward methods
 training_params = {
     'n_splits': 5,     # Walk-forward validation splits
     'epochs': 50,      # Training epochs per split
@@ -589,19 +598,21 @@ training_params = {
 # If standard import fails:
 import sys
 sys.path.append('/path/to/Blended-Neural-Networks-BLENNs-')
-from blenns_wf.core import Blended-Neural-Networks-BLENNs-
+from blenns_walk_forward import BLENNSWalkForward
 ```
 
 **Memory Issues:**
 ```python
 # Reduce dataset size for low-memory environments
+trader = BLENNSWalkForward(symbol="AAPL")
 data = trader.get_data(start_date="2023-01-01")  # Smaller date range
 ```
 
 **Training Instability:**
 ```python
 # Adjust BFC parameters for smoother signals
-bfc_params = {'alpha': 0.1, 'R': 0.01**2, 'Q': 1e-6}
+bfc_params = {'alpha': 0.1, 'R': 0.005, 'Q': 1e-6}
+trader = BLENNSWalkForward(symbol="AAPL", bfc_params=bfc_params)
 ```
 
 ### Google Colab Specific
@@ -623,7 +634,7 @@ IPython.Application.instance().kernel.do_shutdown(True)
 ### BLENNSWalkForward Class
 
 **`__init__(symbol, bfc_params=None)`**
-- `symbol`: Yahoo Finance ticker symbol
+- `symbol`: Yahoo Finance ticker symbol (str)
 - `bfc_params`: Optional BFC configuration dictionary
 
 **`get_data(start_date, end_date, interval)`**
@@ -634,17 +645,21 @@ IPython.Application.instance().kernel.do_shutdown(True)
 - Creates binary classification targets
 - `lookahead`: Prediction horizon (default: 1 period)
 
-**`encode_candles(data, window_size, img_size)`**
-- Generates candlestick images from BFC data
-- Returns (images, volumes) tuple
+**`prepare_inputs(data, window_size, img_size)`**
+- Generates candlestick images and prepares model inputs
+- Returns (X_img, X_vol, y) tuple
 
-**`train_model(X_img, X_vol, y, **kwargs)`**
+**`train_model(n_splits, epochs, batch_size)`**
 - Performs walk-forward training
 - Returns training metrics dictionary
 
 **`predict_next_day(train_if_missing=True)`**
 - Generates next period prediction
-- Returns action ("Buy"/"Sell") and confidence
+- Returns dict with 'direction', 'confidence', 'mean', 'std', 'predictions'
+
+**`evaluate_holdout(test_size)`**
+- Evaluates model on holdout data
+- Returns dict with accuracy, AUC, confusion matrix
 
 ## 🎓 Educational Resources
 
@@ -687,7 +702,7 @@ We welcome contributions! Please see our contributing guidelines:
 ### Development Setup
 ```bash
 git clone https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-.git
-cd Blenns_Walk_Forward
+cd Blended-Neural-Networks-BLENNs-
 pip install -e ".[dev]"
 pytest tests/
 ```
@@ -698,8 +713,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support & Community
 
-- **GitHub Issues**: [Report bugs & request features](https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-.git/issues)
-- **Discussions**: [Join the community](https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-.git/discussions)
+- **GitHub Issues**: [Report bugs & request features](https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-/issues)
+- **Discussions**: [Join the community](https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-/discussions)
 - **Email**: info@blennsforecaster.com
 
 ## 🙏 Acknowledgments
@@ -719,6 +734,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 *Built with ❤️ for the quant finance community*
 
-[⬆ Back to Top](#blenns-walk-forward-trading-system)
+[⬆ Back to Top](#blend-neural-networks-blenns-model)
 
 </div>
+```
