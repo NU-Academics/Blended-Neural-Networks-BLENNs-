@@ -61,6 +61,7 @@ class BLENNSWalkForward:
         self.vol_scaler = MinMaxScaler()
         self.bfc_params = bfc_params or {'alpha': 0.2, 'R': 0.01, 'Q': 1e-5}
         self.last_data = None
+        self.raw_data = None
         self.images = None
         self.volumes = None
         self.targets = None
@@ -422,6 +423,7 @@ class BLENNSWalkForward:
         self.metrics = {'fold_accs': [], 'fold_aucs': []}
         best_model = None
         best_auc_score = 0.0
+        self.training_history = None
         
         for fold, (train_idx, val_idx) in enumerate(tscv.split(X_img)):
             print(f"\n  ── Fold {fold+1}/{n_splits} | train={len(train_idx)}, val={len(val_idx)} ──")
@@ -464,10 +466,13 @@ class BLENNSWalkForward:
             test_size: Proportion of data to use for holdout evaluation
         
         Returns:
-            Dictionary with evaluation metrics
+            Dictionary with evaluation metrics including y_true and y_pred
         """
         if self.model is None:
             raise ValueError("Model not trained. Call train_model() first.")
+        
+        if self.images is None or self.targets is None:
+            raise ValueError("No data available. Run prepare_inputs() first.")
         
         print("\n[7/8] Running holdout evaluation (last {:.0%} of data)...".format(test_size))
         
@@ -489,7 +494,9 @@ class BLENNSWalkForward:
             'auc': final_auc,
             'confusion_matrix': cm,
             'fpr': fpr,
-            'tpr': tpr
+            'tpr': tpr,
+            'y_true': y_true,
+            'y_pred': y_pred_prob
         }
     
     def monte_carlo_predict(self, X_img_sample=None, X_vol_sample=None, n_samples=100):
@@ -509,6 +516,8 @@ class BLENNSWalkForward:
         
         # Use last sample if not provided
         if X_img_sample is None:
+            if self.images is None:
+                raise ValueError("No data available. Run prepare_inputs() first.")
             X_img_sample = self.images[-1:]
             X_vol_sample = self.volumes[-1:]
         
