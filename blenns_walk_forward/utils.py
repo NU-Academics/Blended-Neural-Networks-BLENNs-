@@ -2,15 +2,6 @@
 """
 BLENNS Trading System - Utility Functions with BFC Integration
 Complete implementation from BLENNS Original (2010-Present)
-
-Provides:
-- Candlestick visualization with BFC filtering
-- Training curve plotting with loss and metrics
-- SHAP model interpretability for BFC candle regions
-- Monte Carlo dropout uncertainty estimation
-- ROC curve and confusion matrix visualization
-- ATR calculation for risk management
-- Predicted candle visualization with confidence
 """
 
 import numpy as np
@@ -78,11 +69,6 @@ def normalize_data(images, volumes):
 def plot_training_curves(history, fold=None, figsize=(12, 4)):
     """
     Enhanced training metrics visualization with loss, accuracy, and AUC
-    
-    Args:
-        history: Keras training history object
-        fold: Fold number (optional, for title)
-        figsize: Figure size (width, height)
     """
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
     fig.patch.set_facecolor("#0a0a0f")
@@ -105,8 +91,9 @@ def plot_training_curves(history, fold=None, figsize=(12, 4)):
     ax2.set_facecolor("#0a0a0f")
     ax2.plot(history.history['accuracy'], label='Train Acc', color="#22c55e", linewidth=1.5)
     ax2.plot(history.history['val_accuracy'], label='Val Acc', color="#84cc16", linewidth=1.5)
-    ax2.plot(history.history['auc'], label='Train AUC', color="#3b82f6", linewidth=1.5)
-    ax2.plot(history.history['val_auc'], label='Val AUC', color="#6366f1", linewidth=1.5)
+    if 'auc' in history.history:
+        ax2.plot(history.history['auc'], label='Train AUC', color="#3b82f6", linewidth=1.5)
+        ax2.plot(history.history['val_auc'], label='Val AUC', color="#6366f1", linewidth=1.5)
     ax2.set_title(f'Fold {fold} — Performance Metrics' if fold else 'Performance Metrics',
                   fontsize=11, color="white")
     ax2.set_xlabel('Epoch', color="#9ca3af")
@@ -124,46 +111,42 @@ def plot_training_curves(history, fold=None, figsize=(12, 4)):
 def plot_roc_curve(y_true, y_pred, figsize=(8, 6)):
     """
     Plot ROC curve with AUC score
-    
-    Args:
-        y_true: True labels
-        y_pred: Predicted probabilities
-        figsize: Figure size (width, height)
-    
-    Returns:
-        Tuple of (fpr, tpr, roc_auc)
     """
-    fpr, tpr, _ = roc_curve(y_true, y_pred)
-    roc_auc = auc(fpr, tpr)
+    if y_pred is None or y_true is None:
+        print("   ⚠️ Cannot plot ROC curve: missing predictions or true labels")
+        return None, None, None
     
-    fig, ax = plt.subplots(figsize=figsize)
-    fig.patch.set_facecolor("#0a0a0f")
-    ax.set_facecolor("#0a0a0f")
-    
-    ax.plot(fpr, tpr, color="#6366f1", lw=2, label=f'AUC = {roc_auc:.3f}')
-    ax.plot([0, 1], [0, 1], color="gray", linestyle="--", linewidth=1, alpha=0.7)
-    ax.set_title("ROC Curve", fontsize=12, color="white")
-    ax.set_xlabel("False Positive Rate", color="#9ca3af")
-    ax.set_ylabel("True Positive Rate", color="#9ca3af")
-    ax.legend(facecolor="#12121a", labelcolor="white")
-    ax.tick_params(colors="#9ca3af")
-    for spine in ax.spines.values(): 
-        spine.set_edgecolor("#1f1f35")
-    ax.grid(axis="both", color="#1f1f35", linewidth=0.5, alpha=0.5)
-    
-    plt.tight_layout()
-    plt.show()
-    
-    return fpr, tpr, roc_auc
+    try:
+        fpr, tpr, _ = roc_curve(y_true, y_pred)
+        roc_auc = auc(fpr, tpr)
+        
+        fig, ax = plt.subplots(figsize=figsize)
+        fig.patch.set_facecolor("#0a0a0f")
+        ax.set_facecolor("#0a0a0f")
+        
+        ax.plot(fpr, tpr, color="#6366f1", lw=2, label=f'AUC = {roc_auc:.3f}')
+        ax.plot([0, 1], [0, 1], color="gray", linestyle="--", linewidth=1, alpha=0.7)
+        ax.set_title("ROC Curve", fontsize=12, color="white")
+        ax.set_xlabel("False Positive Rate", color="#9ca3af")
+        ax.set_ylabel("True Positive Rate", color="#9ca3af")
+        ax.legend(facecolor="#12121a", labelcolor="white")
+        ax.tick_params(colors="#9ca3af")
+        for spine in ax.spines.values(): 
+            spine.set_edgecolor("#1f1f35")
+        ax.grid(axis="both", color="#1f1f35", linewidth=0.5, alpha=0.5)
+        
+        plt.tight_layout()
+        plt.show()
+        
+        return fpr, tpr, roc_auc
+    except Exception as e:
+        print(f"   ⚠️ Error plotting ROC curve: {e}")
+        return None, None, None
 
 
 def plot_confusion_matrix(cm, figsize=(6, 5)):
     """
     Plot confusion matrix with annotations
-    
-    Args:
-        cm: Confusion matrix array (2x2)
-        figsize: Figure size (width, height)
     """
     fig, ax = plt.subplots(figsize=figsize)
     fig.patch.set_facecolor("#0a0a0f")
@@ -175,8 +158,9 @@ def plot_confusion_matrix(cm, figsize=(6, 5)):
     # Add text annotations
     for i in range(2):
         for j in range(2):
+            text_color = "white" if cm[i, j] > cm.max()/2 else "black"
             ax.text(j, i, str(cm[i, j]), ha="center", va="center", 
-                   fontsize=16, fontweight="bold", color="white" if cm[i, j] > cm.max()/2 else "black")
+                   fontsize=16, fontweight="bold", color=text_color)
     
     ax.set_xticks([0, 1])
     ax.set_yticks([0, 1])
@@ -189,110 +173,100 @@ def plot_confusion_matrix(cm, figsize=(6, 5)):
     plt.show()
 
 
-def explain_model_with_shap(model, X_img, X_vol, sample_idx=-1):
+def explain_model_with_shap(model, X_img, X_vol, sample_idx=-1, n_samples=50):
     """
-    Enhanced SHAP explanation with BFC-specific feature analysis
-    
-    Args:
-        model: Trained BLENNS model
-        X_img: Image inputs (samples, timesteps, H, W, C)
-        X_vol: Volume inputs (samples, 1)
-        sample_idx: Index of sample to explain (default: last sample)
-    
-    Returns:
-        Dictionary with feature impacts and SHAP values
+    Perturbation-based feature importance (SHAP-style).
+    Works with TimeDistributed CNN+LSTM models without GradientExplainer batch-size issues.
     """
-    print("\nComputing SHAP feature importance via GradientExplainer...")
+    print("\n   Computing SHAP feature importance via perturbation...")
     
-    # Use last 50 samples as background for SHAP
-    n_background = min(50, len(X_img))
-    background = [X_img[-n_background:], X_vol[-n_background:]]
-    sample = [X_img[sample_idx:sample_idx+1], X_vol[sample_idx:sample_idx+1]]
+    # Select sample to explain
+    if sample_idx == -1:
+        X_img_s = X_img[-1:]
+        X_vol_s = X_vol[-1:]
+    else:
+        X_img_s = X_img[sample_idx:sample_idx+1]
+        X_vol_s = X_vol[sample_idx:sample_idx+1]
     
-    # Create explainer and calculate SHAP values
-    explainer = shap.GradientExplainer(model, background)
-    shap_values = explainer.shap_values(sample)
+    # Get base prediction
+    base_pred = float(model.predict([X_img_s, X_vol_s], verbose=0)[0][0])
     
-    # Extract SHAP values
-    img_shap = shap_values[0][0][0]   # shape: (H, W, C)
-    vol_shap = float(shap_values[1][0][0])
+    # Get dimensions
+    window_size = X_img_s.shape[1]
+    img_size = X_img_s.shape[2]
     
-    # Map pixel regions to BFC candle features
-    # Regions based on typical candlestick anatomy
-    impact_features = {
-        'BFC Upper Wick':  np.mean(np.abs(img_shap[0:15,  25:40, 1])),   # Green channel
-        'BFC Lower Wick':  np.mean(np.abs(img_shap[50:64, 25:40, 0])),   # Red channel
-        'BFC Bullish Body': np.mean(np.abs(img_shap[25:40, 25:40, 1])),  # Green body
-        'BFC Bearish Body': np.mean(np.abs(img_shap[25:40, 25:40, 0])),  # Red body
-        'Volume Impact':   abs(vol_shap)
+    # Map image regions to BFC candlestick features
+    region_defs = {
+        'BFC Upper Wick':   (0,            img_size//4,  img_size//3, 2*img_size//3),
+        'BFC Bullish Body': (img_size//4,  img_size//2,  img_size//3, 2*img_size//3),
+        'BFC Bearish Body': (img_size//2,  3*img_size//4, img_size//3, 2*img_size//3),
+        'BFC Lower Wick':   (3*img_size//4, img_size,     img_size//3, 2*img_size//3),
     }
     
-    # Print feature impacts
-    print("  SHAP Feature Impacts:")
-    for k, v in sorted(impact_features.items(), key=lambda x: -x[1]):
-        print(f"    {k:<22}: {v:.6f}")
+    impacts = {}
     
-    # Visualization 1: Candle with SHAP overlay
+    # Image region perturbations
+    for feat_name, (r0, r1, c0, c1) in region_defs.items():
+        diffs = []
+        for _ in range(n_samples):
+            X_perturbed = X_img_s.copy()
+            noise = np.random.uniform(0, 1, X_perturbed[:, :, r0:r1, c0:c1, :].shape)
+            X_perturbed[:, :, r0:r1, c0:c1, :] = noise
+            p = float(model.predict([X_perturbed, X_vol_s], verbose=0)[0][0])
+            diffs.append(abs(base_pred - p))
+        impacts[feat_name] = float(np.mean(diffs))
+    
+    # Volume perturbation
+    vol_diffs = []
+    for _ in range(n_samples):
+        X_vol_perturbed = np.random.uniform(0, 1, X_vol_s.shape).astype(np.float32)
+        p = float(model.predict([X_img_s, X_vol_perturbed], verbose=0)[0][0])
+        vol_diffs.append(abs(base_pred - p))
+    impacts['Volume Impact'] = float(np.mean(vol_diffs))
+    
+    # Sort by importance
+    impacts_sorted = dict(sorted(impacts.items(), key=lambda x: x[1]))
+    
+    print("   SHAP Feature Impacts:")
+    for k, v in sorted(impacts.items(), key=lambda x: -x[1]):
+        print(f"     {k:<22}: {v:.6f}")
+    
+    # Plot
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
     fig.patch.set_facecolor("#0a0a0f")
     
-    ax1.imshow(X_img[sample_idx][0])
-    ax1.set_title('BFC Processed Candle (last)', fontsize=10, color="white")
+    # Show last BFC candle image (last timestep)
+    candle_img = X_img_s[0, -1]  # last timestep
+    ax1.imshow(candle_img)
+    ax1.set_title('BFC Processed Candle (last)', fontsize=10, color='white')
     ax1.axis('off')
     ax1.set_facecolor("#0a0a0f")
     
-    sorted_feats = dict(sorted(impact_features.items(), key=lambda x: x[1]))
-    colors = ["#6366f1" if v >= 0 else "#ef4444" for v in sorted_feats.values()]
-    ax2.barh(list(sorted_feats.keys()), list(sorted_feats.values()), color=colors, alpha=0.85)
-    ax2.set_title('SHAP Feature Impacts (BFC Regions)', fontsize=10, color="white")
+    colors = ['#6366f1' for _ in impacts_sorted.values()]
+    bars = ax2.barh(list(impacts_sorted.keys()), list(impacts_sorted.values()),
+                   color=colors, alpha=0.85)
+    ax2.set_title('SHAP Feature Impacts (Perturbation)', color='white', fontsize=10)
+    ax2.set_xlabel('Mean |Δ Prediction| Impact', color='#9ca3af')
     ax2.axvline(0, color='white', linestyle='--', linewidth=0.8)
+    ax2.tick_params(colors='#9ca3af')
     ax2.set_facecolor("#0a0a0f")
-    ax2.tick_params(colors="#9ca3af")
-    for spine in ax2.spines.values(): 
-        spine.set_edgecolor("#1f1f35")
+    for sp in ax2.spines.values(): 
+        sp.set_edgecolor("#1f1f35")
+    
+    # Add value labels
+    for bar, val in zip(bars, impacts_sorted.values()):
+        ax2.text(bar.get_width() + 0.0001, bar.get_y() + bar.get_height()/2,
+                f'{val:.5f}', va='center', fontsize=9, color='#9ca3af')
     
     plt.tight_layout()
     plt.show()
     
-    # Visualization 2: Pixel importance heatmap
-    shap_img_display = np.mean(np.abs(img_shap), axis=-1)
-    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-    fig.patch.set_facecolor("#0a0a0f")
-    
-    axes[0].imshow(X_img[sample_idx][0])
-    axes[0].set_title('BFC Candle (RGB)', fontsize=10, color="white")
-    axes[0].axis('off')
-    axes[0].set_facecolor("#0a0a0f")
-    
-    im = axes[1].imshow(shap_img_display, cmap='hot')
-    axes[1].set_title('SHAP Pixel Importance (|mean|)', fontsize=10, color="white")
-    axes[1].axis('off')
-    axes[1].set_facecolor("#0a0a0f")
-    plt.colorbar(im, ax=axes[1])
-    
-    plt.tight_layout()
-    plt.show()
-    
-    return {
-        'img_shap': img_shap,
-        'vol_shap': vol_shap,
-        'feature_impacts': impact_features
-    }
+    return impacts
 
 
 def monte_carlo_predict(model, X_img, X_vol, n_samples=100, verbose=True):
     """
     Monte Carlo Dropout uncertainty estimation
-    
-    Args:
-        model: Trained BLENNS model
-        X_img: Single image sample (1, timesteps, H, W, C)
-        X_vol: Single volume sample (1, 1)
-        n_samples: Number of Monte Carlo samples
-        verbose: Print prediction summary
-    
-    Returns:
-        Dictionary with mean, std, all predictions, direction, and confidence
     """
     predictions = []
     
@@ -326,11 +300,7 @@ def monte_carlo_predict(model, X_img, X_vol, n_samples=100, verbose=True):
 
 def plot_uncertainty_candle(predictions, figsize=(10, 4)):
     """
-    Visualize prediction uncertainty as a candlestick chart
-    
-    Args:
-        predictions: Array of Monte Carlo predictions
-        figsize: Figure size (width, height)
+    Visualize prediction uncertainty as a histogram
     """
     mean_pred = np.mean(predictions)
     std_pred = np.std(predictions)
@@ -366,13 +336,6 @@ def plot_uncertainty_candle(predictions, figsize=(10, 4)):
 def compute_atr(df, period=14):
     """
     Calculate Average True Range for risk management
-    
-    Args:
-        df: DataFrame with 'high', 'low', 'close' columns
-        period: ATR calculation period
-    
-    Returns:
-        ATR value
     """
     h = df["high"].values
     l = df["low"].values
@@ -388,12 +351,6 @@ def compute_atr(df, period=14):
 def atr_multipliers(symbol):
     """
     Get symbol-specific ATR multipliers for stop-loss and take-profit
-    
-    Args:
-        symbol: Trading symbol (Yahoo Finance format)
-    
-    Returns:
-        Tuple of (take_profit_multiplier, stop_loss_multiplier)
     """
     s = symbol.upper()
     
@@ -405,7 +362,7 @@ def atr_multipliers(symbol):
     if s.endswith("=X") or any(x in s for x in ["USD", "EUR", "GBP", "JPY", "CHF"]):
         return 1.5, 1.0
     
-    # Commodities (GC=F gold, CL=F oil)
+    # Commodities
     if any(x in s for x in ["GC", "OIL", "CL", "SI", "HG"]):
         return 1.5, 1.0
     
@@ -417,15 +374,6 @@ def plot_predicted_candle(historical_data, direction, confidence, atr_value,
                           symbol="", n_show=15, figsize=(14, 6)):
     """
     Visualize historical candles with predicted next candle
-    
-    Args:
-        historical_data: DataFrame with raw price data
-        direction: 'Bullish' or 'Bearish'
-        confidence: Confidence level (0-1)
-        atr_value: ATR value for candle sizing
-        symbol: Trading symbol for title
-        n_show: Number of historical candles to show
-        figsize: Figure size (width, height)
     """
     last_close = historical_data["close"].iloc[-1]
     tp_mult, sl_mult = atr_multipliers(symbol)
