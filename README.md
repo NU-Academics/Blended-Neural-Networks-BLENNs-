@@ -181,40 +181,40 @@ def enhanced_prediction_visualization(prediction, confidence, mean_pred, std_pre
     plt.show()
 
 print("="*60)
-print("🚀 BLENNS WALK-FORWARD TRADING SYSTEM")
+print(" BLENNS WALK-FORWARD TRADING SYSTEM")
 print("="*60)
 
 # Initialize with custom parameters
-print("\n📌 Step 1: Initializing BLENNS Model...")
+print("\n Step 1: Initializing BLENNS Model...")
 trader = BLENNSWalkForward(symbol="AAPL")
 
 # 1. Data Acquisition & BFC Processing
-print("\n📥 Step 2: Fetching and processing data...")
+print("\n Step 2: Fetching and processing data...")
 try:
     data = trader.get_data(start_date="2020-01-01")
-    print(f"   ✅ Data range: {data['date'].min().date()} to {data['date'].max().date()}")
-    print(f"   ✅ Total records: {len(data)}")
+    print(f"    Data range: {data['date'].min().date()} to {data['date'].max().date()}")
+    print(f"    Total records: {len(data)}")
 except Exception as e:
-    print(f"   ❌ Error fetching data: {e}")
+    print(f"    Error fetching data: {e}")
     exit(1)
 
 # 2. Target Creation
-print("\n🎯 Step 3: Creating prediction targets...")
+print("\n Step 3: Creating prediction targets...")
 data = trader.create_target(data)
 bullish = data['target'].sum()
 bearish = len(data) - bullish
-print(f"   ✅ Target distribution: Bullish: {bullish} ({bullish/len(data)*100:.1f}%), Bearish: {bearish} ({bearish/len(data)*100:.1f}%)")
+print(f"    Target distribution: Bullish: {bullish} ({bullish/len(data)*100:.1f}%), Bearish: {bearish} ({bearish/len(data)*100:.1f}%)")
 
 # 3. Prepare Inputs (Candlestick Image Generation)
-print("\n🖼️ Step 4: Encoding BFC candlesticks...")
+print("\n Step 4: Encoding BFC candlesticks...")
 try:
     X_img, X_vol, y = trader.prepare_inputs(data, window_size=5, img_size=64)
-    print(f"   ✅ Generated {len(X_img)} candlestick images")
-    print(f"   ✅ X_img shape: {X_img.shape}")
-    print(f"   ✅ X_vol shape: {X_vol.shape}")
-    print(f"   ✅ y shape: {y.shape}")
+    print(f"    Generated {len(X_img)} candlestick images")
+    print(f"    X_img shape: {X_img.shape}")
+    print(f"    X_vol shape: {X_vol.shape}")
+    print(f"    y shape: {y.shape}")
 except Exception as e:
-    print(f"   ❌ Error encoding candles: {e}")
+    print(f"    Error encoding candles: {e}")
     exit(1)
 
 # 4. Visualize Processed Candles
@@ -222,29 +222,29 @@ print("\n👀 Step 5: Displaying BFC-processed candles...")
 try:
     visualize_candles(X_img[:, 0, :, :, :], n=4)
 except Exception as e:
-    print(f"   ⚠️ Could not visualize candles: {e}")
+    print(f"    Could not visualize candles: {e}")
 
 # 5. Model Training
-print("\n🤖 Step 6: Training BLENNS model...")
+print("\n Step 6: Training BLENNS model...")
 print("   (This may take a few minutes...)")
 try:
     metrics = trader.train_model(n_splits=3, epochs=30, batch_size=32, verbose=1)
-    print(f"\n   ✅ Training complete!")
-    print(f"   📊 Average Accuracy: {np.mean(metrics['fold_accs'])*100:.2f}%")
-    print(f"   📊 Average AUC: {np.mean(metrics['fold_aucs'])*100:.2f}%")
+    print(f"\n    Training complete!")
+    print(f"    Average Accuracy: {np.mean(metrics['fold_accs'])*100:.2f}%")
+    print(f"    Average AUC: {np.mean(metrics['fold_aucs'])*100:.2f}%")
 except Exception as e:
-    print(f"   ❌ Error during training: {e}")
+    print(f"    Error during training: {e}")
     exit(1)
 
 # 6. Generate Prediction with Confidence
-print("\n🔮 Step 7: Generating prediction...")
+print("\n Step 7: Generating prediction...")
 try:
     result = trader.predict_next_day(train_if_missing=False)
-    print(f"\n   🎯 FINAL PREDICTION: {result['direction']}")
-    print(f"   📊 Confidence: {result['confidence']:.1%}")
-    print(f"   🔢 Raw Probability: {result['mean']:.4f} ± {result['std']:.4f}")
+    print(f"\n    FINAL PREDICTION: {result['direction']}")
+    print(f"    Confidence: {result['confidence']:.1%}")
+    print(f"    Raw Probability: {result['mean']:.4f} ± {result['std']:.4f}")
 except Exception as e:
-    print(f"   ❌ Error generating prediction: {e}")
+    print(f"    Error generating prediction: {e}")
     exit(1)
 
 # 7. Display Visual Prediction Candle
@@ -257,53 +257,53 @@ try:
         result['std']
     )
 except Exception as e:
-    print(f"   ⚠️ Could not display prediction candle: {e}")
+    print(f"    Could not display prediction candle: {e}")
 
 # 8. Uncertainty Analysis
 print("\n📈 Step 9: Calculating prediction uncertainty...")
 try:
     plot_uncertainty_candle(result['predictions'])
 except Exception as e:
-    print(f"   ⚠️ Could not plot uncertainty: {e}")
+    print(f"    Could not plot uncertainty: {e}")
 
 # 9. Model Evaluation (Holdout)
-print("\n📊 Step 10: Evaluating model on holdout data...")
+print("\n Step 10: Evaluating model on holdout data...")
 try:
     eval_results = trader.evaluate_holdout(test_size=0.2)
-    print(f"   ✅ Holdout Accuracy: {eval_results['accuracy']*100:.2f}%")
-    print(f"   ✅ Holdout AUC: {eval_results['auc']*100:.2f}%")
+    print(f"    Holdout Accuracy: {eval_results['accuracy']*100:.2f}%")
+    print(f"    Holdout AUC: {eval_results['auc']*100:.2f}%")
     
     # Plot ROC curve
-    print("\n   📈 Plotting ROC curve...")
+    print("\n    Plotting ROC curve...")
     plot_roc_curve(eval_results['y_true'], eval_results['y_pred'])
     
     # Plot confusion matrix
-    print("   📊 Plotting confusion matrix...")
+    print("    Plotting confusion matrix...")
     plot_confusion_matrix(eval_results['confusion_matrix'])
 except Exception as e:
-    print(f"   ⚠️ Could not evaluate model: {e}")
+    print(f"    Could not evaluate model: {e}")
 
 # 10. Model Explanations (Perturbation-based SHAP)
-print("\n🔍 Step 11: Generating SHAP explanations...")
+print("\n Step 11: Generating SHAP explanations...")
 if len(X_img) >= 10:
     try:
         # Use perturbation-based SHAP (works with TimeDistributed models)
         shap_result = explain_model_with_shap(trader.model, X_img, X_vol, sample_idx=-1, n_samples=30)
         if shap_result is None:
-            print("   ℹ️ SHAP explanation skipped (insufficient data or computation error)")
+            print("    SHAP explanation skipped (insufficient data or computation error)")
         else:
-            print("   ✅ SHAP explanation complete")
+            print("    SHAP explanation complete")
     except Exception as e:
-        print(f"   ⚠️ SHAP explanation failed: {e}")
+        print(f"    SHAP explanation failed: {e}")
 else:
-    print(f"   ℹ️ Not enough samples for SHAP explanation (have {len(X_img)}, need 10)")
+    print(f"    Not enough samples for SHAP explanation (have {len(X_img)}, need 10)")
 
 # 11. Predicted Candle Visualization with ATR
 print("\n🕯️ Step 12: Generating predicted candle chart...")
 try:
     # Calculate ATR for risk management
     atr_value = compute_atr(data, period=14)
-    print(f"   📊 ATR (14-period): {atr_value:.4f}")
+    print(f"    ATR (14-period): {atr_value:.4f}")
     
     # Plot predicted candle with historical context
     plot_predicted_candle(
@@ -315,27 +315,27 @@ try:
         n_show=15
     )
 except Exception as e:
-    print(f"   ⚠️ Could not plot predicted candle: {e}")
+    print(f"    Could not plot predicted candle: {e}")
 
 # Summary
 print("\n" + "="*60)
-print("✅ BLENNS ANALYSIS COMPLETE!")
+print(" BLENNS ANALYSIS COMPLETE!")
 print("="*60)
-print(f"\n📋 SUMMARY:")
+print(f"\n SUMMARY:")
 print(f"   Symbol: AAPL")
 print(f"   Direction: {result['direction']}")
 print(f"   Confidence: {result['confidence']:.1%}")
 print(f"   Model Accuracy: {np.mean(metrics['fold_accs'])*100:.2f}%")
 print(f"   Model AUC: {np.mean(metrics['fold_aucs'])*100:.2f}%")
 print(f"   Uncertainty: ±{result['std']:.4f}")
-print("\n💡 Next Steps:")
+print("\n Next Steps:")
 print("   1. Use this prediction for research purposes only")
 print("   2. Always validate with your own analysis")
 print("   3. Consider risk management before any trading decision")
 print("="*60)
 ```
 
-## 🏗️ System Architecture
+##  System Architecture
 
 ### BFC Processing Pipeline
 1. **EMA Smoothing**: Exponential Moving Average for initial noise reduction
@@ -355,7 +355,7 @@ print("="*60)
 - **Metrics**: Accuracy, AUC-ROC, Loss curves
 - **Uncertainty**: Monte Carlo dropout (100 samples)
 
-## 🏗️ BLENNS Model Architecture
+##  BLENNS Model Architecture
 
 ```mermaid
 graph TD
@@ -494,7 +494,7 @@ Fusion_Output = {
 | **Fusion Layer** | Concatenation | (None, 4097) | Multi-modal feature integration |
 | **Output Head** | 32→1 units, sigmoid | (None, 1) | Binary prediction with confidence |
 
-## 🔄 Data Flow Sequence
+##  Data Flow Sequence
 
 ```
 1. RAW_DATA → [Open, High, Low, Close, Volume, Date]
@@ -507,7 +507,7 @@ Fusion_Output = {
 8. CONFIDENCE_SCORING → Probability calibration with MC Dropout
 ```
 
-## 🎯 Key Architectural Innovations
+##  Key Architectural Innovations
 
 ### 1. **Multi-Stage BFC Processing**
 ```
@@ -533,7 +533,7 @@ Context Vector: ∑(weights × values)
 → Focused temporal representation
 ```
 
-## ⚡ Performance Optimizations
+##  Performance Optimizations
 
 - **TimeDistributed Wrapper**: Enables batch processing of image sequences
 - **Attention Mechanism**: Reduces LSTM sequence modeling complexity  
@@ -546,9 +546,9 @@ Context Vector: ∑(weights × values)
 
 **Architecture Summary**: BLENNS architecture achieves **95.45% accuracy** with 28.39 Sharpe Ratio, validated by rigorous statistical testing by combining the strengths of signal processing (BFC), computer vision (CNN), sequential modeling (LSTM), and attention mechanisms in a carefully engineered multi-modal framework.
 
-## 📈 Performance & Results
+##  Performance & Results
 
-## 🏆 Statistical Validation & Benchmark Performance
+##  Statistical Validation & Benchmark Performance
 
 ### Official Statistical Test Results
 
@@ -605,18 +605,18 @@ Context Vector: ∑(weights × values)
 ```
 🚀 BLENNS Walk Forward Analysis: AAPL
 ========================================
-📊 Data Range: 2015-01-02 to 2025-09-25 (2699 records)
-🎯 Target Distribution: Balanced dataset
-🖼️ Generated 2693 BFC-processed candlestick images
-🤖 Training Complete - Final Accuracy: 95.55%
+ Data Range: 2015-01-02 to 2025-09-25 (2699 records)
+ Target Distribution: Balanced dataset
+ Generated 2693 BFC-processed candlestick images
+ Training Complete - Final Accuracy: 95.55%
 
 📈 STATISTICAL VALIDATION RESULTS:
-├── Hansen's SPA Test: p = 0.0000 ✅
-├── Diebold-Mariano Test: p = 0.0000 ✅
+├── Hansen's SPA Test: p = 0.0000 
+├── Diebold-Mariano Test: p = 0.0000 
 ├── Relative vs ARIMA: +113.77% improvement
 └── Sharpe Ratio: 28.39 (Exceptional)
 
-🎯 FINAL PREDICTION: Bullish (Confidence: 95.55%)
+ FINAL PREDICTION: Bullish (Confidence: 95.55%)
 ```
 
 ### Key Performance Insights
@@ -661,7 +661,7 @@ The demonstrated 95.45% accuracy on AAPL represents typical performance across l
 
 *Note: All performance results are based on rigorous walk-forward validation with 2015-2025 data, ensuring real-world applicability and preventing look-ahead bias. Statistical significance confirmed at p < 0.0001 level.*
 
-## 🔍 Model Interpretability
+##  Model Interpretability
 
 ### SHAP Feature Analysis
 The system provides detailed feature importance analysis:
@@ -739,7 +739,7 @@ import IPython
 IPython.Application.instance().kernel.do_shutdown(True)
 ```
 
-## 📚 API Reference
+##  API Reference
 
 ### BLENNSWalkForward Class
 
@@ -799,7 +799,7 @@ The Blenns Filter Candles (BFC) system applies three-stage processing:
 - Performance varies across market regimes
 - Requires continuous model retraining for adaptation
 
-## 🤝 Contributing
+##  Contributing
 
 We welcome contributions! Please see our contributing guidelines:
 
@@ -827,7 +827,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Discussions**: [Join the community](https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-/discussions)
 - **Email**: info@blennsforecaster.com
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - Yahoo Finance for market data access, Metatrader5 & Binance API For live trading data
 - TensorFlow team for deep learning framework
