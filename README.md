@@ -113,6 +113,7 @@ trader = BLENNSWalkForward(symbol="BTC-USD", bfc_params=bfc_params)
 ### Complete Workflow with Visualizations
 
 ```python
+
 # -*- coding: utf-8 -*-
 """
 ================================================================================
@@ -241,7 +242,7 @@ print_section_header("BLENNS ORIGINAL — COMPLETE TRADING WORKFLOW", 60)
 
 # Configuration
 SYMBOL = "AAPL"
-START_DATE = "2020-01-01"
+START_DATE = "2010-01-01"
 N_SPLITS = 3
 EPOCHS = 30
 BATCH_SIZE = 32
@@ -343,7 +344,6 @@ try:
     print(f"\n✓ Training complete!")
     print(f"   Average Accuracy: {np.mean(metrics['fold_accs'])*100:.2f}% (±{np.std(metrics['fold_accs'])*100:.2f}%)")
     print(f"   Average AUC: {np.mean(metrics['fold_aucs'])*100:.2f}% (±{np.std(metrics['fold_aucs'])*100:.2f}%)")
-    print(f"   Average Loss: {np.mean(metrics['fold_losses']):.4f}")
 
 except Exception as e:
     print(f"✗ Error during training: {e}")
@@ -356,11 +356,23 @@ except Exception as e:
 print_section_header("STEP 7: Monte Carlo Dropout Prediction", 60)
 
 try:
-    result = trader.predict_next_day(train_if_missing=False)
+    # Get the last sample for prediction
+    X_img_last = X_img[-1:]
+    X_vol_last = X_vol[-1:]
+
+    # Run Monte Carlo prediction
+    mc_result = monte_carlo_predict(trader.model, X_img_last, X_vol_last, n_samples=100)
+
+    prediction_direction = mc_result['direction']
+    prediction_confidence = mc_result['confidence']
+    prediction_mean = mc_result['mean']
+    prediction_std = mc_result['std']
+    predictions_array = mc_result['predictions']
+
     print(f"✓ Prediction generated")
-    print(f"   Direction: {result['direction']}")
-    print(f"   Confidence: {result['confidence']:.1%}")
-    print(f"   Raw Probability: {result['mean']:.4f} ± {result['std']:.4f}")
+    print(f"   Direction: {prediction_direction}")
+    print(f"   Confidence: {prediction_confidence:.1%}")
+    print(f"   Raw Probability: {prediction_mean:.4f} ± {prediction_std:.4f}")
 except Exception as e:
     print(f"✗ Error generating prediction: {e}")
     exit(1)
@@ -373,10 +385,10 @@ print_section_header("STEP 8: Prediction Candle Visualization", 60)
 
 try:
     enhanced_prediction_visualization(
-        result['direction'],
-        result['confidence'],
-        result['mean'],
-        result['std']
+        prediction_direction,
+        prediction_confidence,
+        prediction_mean,
+        prediction_std
     )
     print("✓ Prediction candle displayed")
 except Exception as e:
@@ -389,11 +401,11 @@ except Exception as e:
 print_section_header("STEP 9: Uncertainty Analysis", 60)
 
 try:
-    plot_uncertainty_candle(result['predictions'])
+    plot_uncertainty_candle(predictions_array)
     print("✓ Uncertainty distribution plotted")
-    print(f"   Prediction range: [{result['predictions'].min():.4f}, {result['predictions'].max():.4f}]")
-    print(f"   95% Confidence interval: [{np.percentile(result['predictions'], 2.5):.4f}, "
-          f"{np.percentile(result['predictions'], 97.5):.4f}]")
+    print(f"   Prediction range: [{predictions_array.min():.4f}, {predictions_array.max():.4f}]")
+    print(f"   95% Confidence interval: [{np.percentile(predictions_array, 2.5):.4f}, "
+          f"{np.percentile(predictions_array, 97.5):.4f}]")
 except Exception as e:
     print(f"⚠ Could not plot uncertainty: {e}")
 
@@ -511,8 +523,8 @@ try:
     # Plot predicted candle with historical context
     plot_predicted_candle(
         trader.raw_data,
-        result['direction'],
-        result['confidence'],
+        prediction_direction,
+        prediction_confidence,
         atr_value,
         symbol=SYMBOL,
         n_show=15
@@ -544,9 +556,9 @@ print(f"""
 
    Prediction:
    ----------------------------------------------------------------
-   Direction:                 {result['direction']}
-   Confidence:                {result['confidence']:.1%}
-   Raw Score:                 {result['mean']:.4f} ± {result['std']:.4f}
+   Direction:                 {prediction_direction}
+   Confidence:                {prediction_confidence:.1%}
+   Raw Score:                 {prediction_mean:.4f} ± {prediction_std:.4f}
 
    Explainability (RQ3):
    ----------------------------------------------------------------
