@@ -1,8 +1,3 @@
-Here’s a **clean, publication-grade, well-structured rewrite** of your README. I improved formatting, hierarchy, readability, and academic tone while keeping all your content intact.
-
----
-
-````markdown
 # 🚀 BLENNS ORIGINAL — Complete Trading Pipeline
 
 **Advanced AI-Powered Financial Market Prediction using BFC Technology and Explainable AI**
@@ -76,26 +71,17 @@ The system is designed for **multi-asset prediction**, **interpretability**, and
 git clone https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-.git
 cd Blended-Neural-Networks-BLENNs-
 pip install -e .
-````
 
----
 
-## ☁️ Google Colab Setup
-
-```python
+ Google Colab Setup
 !pip install yfinance tensorflow shap mplfinance pillow scikit-learn scipy statsmodels
 !git clone https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-.git
 %cd Blended-Neural-Networks-BLENNs-
 !pip install -e .
-```
 
----
 
-# 🚀 Quick Start
-
-## 🔹 Basic Prediction
-
-```python
+Quick Start
+🔹 Basic Prediction
 from blenns_walk_forward import BLENNSWalkForward
 
 trader = BLENNSWalkForward(symbol="AAPL")
@@ -103,46 +89,34 @@ result = trader.predict_next_day()
 
 print(result['prediction']['direction'])
 print(result['prediction']['confidence'])
-```
 
----
 
-## 🔹 Multi-Asset Prediction
-
-```python
+🔹 Multi-Asset Prediction
 symbols = ["AAPL", "BTC-USD", "EURUSD=X"]
 
 for s in symbols:
     trader = BLENNSWalkForward(symbol=s)
     r = trader.predict_next_day()
     print(f"{s}: {r['prediction']['direction']} ({r['prediction']['confidence']:.2%})")
-```
 
----
 
-# 🧠 Model Architecture
-
-```
+Model Architecture
 BFC → CNN → LSTM → Attention → Fusion → Dense → Prediction
                     ↑
                  Volume
-```
 
-### Pipeline Flow:
+Pipeline Flow:
 
-1. **BFC Filtering**
-2. **Candlestick Image Encoding**
-3. **CNN Feature Extraction**
-4. **LSTM Temporal Learning**
-5. **Attention Weighting**
-6. **Volume Fusion**
-7. **Prediction Output**
+BFC Filtering
+Candlestick Image Encoding
+CNN Feature Extraction
+LSTM Temporal Learning
+Attention Weighting
+Volume Fusion
+Prediction Output
 
----
 
-# 🔬 BFC Processing Pipeline
-
-```
+BFC Processing Pipeline
 Raw OHLCV
    ↓
 EMA Smoothing
@@ -152,101 +126,137 @@ Heikin-Ashi Transformation
 Kalman Filtering
    ↓
 BFC Candles
-```
 
----
 
-# 🧩 Neural Network Details
+ Neural Network Details
 
-| Layer        | Purpose                      |
-| ------------ | ---------------------------- |
-| CNN          | Spatial pattern detection    |
-| LSTM         | Temporal sequence learning   |
-| Attention    | Focus on important timesteps |
-| Volume Input | Market activity signal       |
-| Dense Layers | Final prediction             |
 
----
 
-# 🧪 Explainability (RQ3)
+Layer
+Purpose
 
-BLENNS uses **SHAP values** to explain predictions and validates them using:
 
-### 📊 Expert Rules
 
-* RSI
-* MACD
-* Moving Average crossover
-* Volume confirmation
-* Support/Resistance
 
----
+CNN
+Spatial pattern detection
 
-## 📐 Cohen’s Kappa
 
+LSTM
+Temporal sequence learning
+
+
+Attention
+Focus on important timesteps
+
+
+Volume Input
+Market activity signal
+
+
+Dense Layers
+Final prediction
+
+
+
+
+ Explainability (RQ3)
+BLENNS uses SHAP values to explain predictions and validates them using:
+Expert Rules
+
+RSI
+MACD
+Moving Average crossover
+Volume confirmation
+Support/Resistance
+
+
+Cohen’s Kappa
 [
 \kappa = \frac{p_o - p_e}{1 - p_e}
 ]
 
-| Range     | Meaning        |
-| --------- | -------------- |
-| 0.61–0.80 | Substantial    |
-| 0.81–1.00 | Almost Perfect |
 
----
 
-# 📊 Statistical Validation
+Range
+Meaning
 
-* Diebold-Mariano Test
-* Hansen SPA Test
-* ANOVA & Tukey HSD
-* Cohen’s Kappa
 
----
 
-# 📈 Performance Summary
 
-| Market      | Accuracy   |
-| ----------- | ---------- |
-| Equities    | 96.29%     |
-| Indices     | 90.91%     |
-| Forex       | 91.80%     |
-| Commodities | 90.58%     |
-| Crypto      | 90.33%     |
-| **Overall** | **91.98%** |
+0.61–0.80
+Substantial
 
----
 
-# ⚙️ Configuration
+0.81–1.00
+Almost Perfect
 
-## BFC Parameters
 
-```python
+
+
+Statistical Validation
+
+Diebold-Mariano Test
+Hansen SPA Test
+ANOVA & Tukey HSD
+Cohen’s Kappa
+
+
+ Performance Summary
+
+
+
+Market
+Accuracy
+
+
+
+
+Equities
+96.29%
+
+
+Indices
+90.91%
+
+
+Forex
+91.80%
+
+
+Commodities
+90.58%
+
+
+Crypto
+90.33%
+
+
+Overall
+91.98%
+
+
+
+
+⚙️ Configuration
+BFC Parameters
 bfc_params = {
     'alpha': 0.2,
     'R': 0.01,
     'Q': 1e-5
 }
-```
 
----
 
-## Training Settings
-
-```python
+Training Settings
 params = {
     'epochs': 50,
     'batch_size': 32,
     'window_size': 5,
     'img_size': 64
 }
-```
 
----
 
-# 📂 Project Structure
-
-```
+Project Structure
 blenns_walk_forward/
 ├── core.py
 ├── models.py
@@ -255,79 +265,59 @@ blenns_walk_forward/
 ├── stats.py
 ├── experts.py
 ├── cli.py
-```
 
----
 
-# 🛠️ Troubleshooting
+Troubleshooting
 
-| Issue        | Fix              |
-| ------------ | ---------------- |
-| Import error | Add repo to path |
-| Memory issue | Reduce dataset   |
-| Slow SHAP    | Reduce samples   |
-| Low accuracy | Tune parameters  |
 
----
 
-# ⚠️ Disclaimer
+Issue
+Fix
 
-* Not financial advice
-* For research purposes only
-* Trading involves risk
-* Always validate before deployment
 
----
 
-# 🤝 Contributing
 
-```bash
+Import error
+Add repo to path
+
+
+Memory issue
+Reduce dataset
+
+
+Slow SHAP
+Reduce samples
+
+
+Low accuracy
+Tune parameters
+
+
+
+
+Disclaimer
+
+Not financial advice
+For research purposes only
+Trading involves risk
+Always validate before deployment
+
+
+ Contributing
 git clone https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-.git
 pip install -e ".[dev]"
 pytest
-```
 
----
 
-# 📜 License
-
+ License
 MIT License
 
----
+ Acknowledgments
 
-# 🙏 Acknowledgments
+Yahoo Finance
+TensorFlow
+SHAP
+Academic supervisors and contributors
 
-* Yahoo Finance
-* TensorFlow
-* SHAP
-* Academic supervisors and contributors
 
----
-
-<div align="center">
-
-**“The market is a device for transferring money from the impatient to the patient.” — Warren Buffett**
-
-</div>
-```
-
----
-
-# 🚀 What I Improved
-
-* Clear section hierarchy (journal-level readability)
-* Cleaner tables
-* Reduced clutter
-* Better academic tone
-* Stronger visual flow
-* Simplified architecture explanation
-
----
-
-If you want next upgrade:
-
-👉 **“Convert this into IEEE paper format”**
-👉 **“Turn into GitHub landing page (premium UI)”**
-👉 **“Add diagrams (publication-ready)”**
-
-Just tell me 👍
+“The market is a device for transferring money from the impatient to the patient.” — Warren Buffett
