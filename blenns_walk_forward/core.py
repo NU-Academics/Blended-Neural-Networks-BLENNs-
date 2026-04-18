@@ -91,6 +91,7 @@ class BLENNSWalkForward:
         """
         self.symbol = symbol
         self.model = None
+        self.best_model = None
         self.vol_scaler = MinMaxScaler()
         self.bfc_params = bfc_params or {'alpha': 0.2, 'R': 0.01, 'Q': 1e-5}
         
@@ -105,7 +106,6 @@ class BLENNSWalkForward:
         # Training metrics
         self.metrics = {'fold_accs': [], 'fold_aucs': [], 'fold_losses': []}
         self.training_history = None
-        self.best_model = None
         
         # SHAP results storage
         self.shap_values = None
@@ -340,7 +340,7 @@ class BLENNSWalkForward:
             dpi: Rendering resolution
         
         Returns:
-            images: Array of normalized RGB images (shape: N×H×W×3)
+            images: Array of normalized RGB images (shape: N×H×W×C)
             volumes: Corresponding volume data
             dates: Corresponding dates for each image
         """
@@ -697,7 +697,59 @@ class BLENNSWalkForward:
         }
     
     # =========================================================================
-    # SECTION 8: SHAP EXPLAINABILITY WITH EXPERT RULE VALIDATION (RQ3)
+    # SECTION 8: PREDICT NEXT DAY (FIXED)
+    # =========================================================================
+    
+    def predict_next_day(self, train_if_missing=True, n_splits=3, epochs=30):
+        """
+        Generate prediction for the next trading day with full pipeline
+        
+        Args:
+            train_if_missing: Automatically train if model is None
+            n_splits: Number of walk-forward folds
+            epochs: Training epochs per fold
+        
+        Returns:
+            Dictionary with prediction results in a consistent structure
+        """
+        # Step 1: Get data
+        if self.bfc_data is None:
+            self.get_data()
+        
+        # Step 2: Prepare data and targets
+        data = self.create_target()
+        X_img, X_vol, y, dates = self.prepare_inputs(data)
+        
+        # Step 3: Train model if needed
+        if self.model is None and train_if_missing:
+            print("\nTraining model first...")
+            self.train_model(n_splits=n_splits, epochs=epochs)
+        elif self.model is None:
+            raise ValueError("Model not trained. Call train_model() first.")
+        
+        # Step 4: Run Monte Carlo prediction
+        X_img_last = X_img[-1:]
+        X_vol_last = X_vol[-1:]
+        mc_results = self.monte_carlo_predict(X_img_last, X_vol_last, n_samples=100)
+        
+        # Step 5: Run holdout evaluation
+        holdout = self.evaluate_holdout()
+        
+        # Step 6: Return properly structured dictionary
+        return {
+            'prediction': {
+                'direction': mc_results['direction'],
+                'confidence': mc_results['confidence'],
+                'mean': mc_results['mean'],
+                'std': mc_results['std'],
+                'predictions': mc_results['predictions']
+            },
+            'holdout_metrics': holdout,
+            'last_date': dates[-1] if dates else None
+        }
+    
+    # =========================================================================
+    # SECTION 9: SHAP EXPLAINABILITY WITH EXPERT RULE VALIDATION (RQ3)
     # =========================================================================
     
     def compute_shap_explanations(self, background_size=50):
@@ -760,290 +812,6 @@ class BLENNSWalkForward:
             print(f"    {k:<35}: {v:.6f}")
         
         return self.shap_values
-    
-    def compute_expert_signals(self, data=None):
-        """
-        Generate expert trading signals from 5 technical analysis rules
-        
-        Expert Rules:
-            1. RSI (Wilder, 1978): Buy when RSI < 30, Sell when RSI > 70
-            2. MACD (Appel, 2005): Buy when MACD > Signal line
-            3. MA Crossover (Murphy, 1999): Buy when SMA20 > SMA50
-            4. Volume Confirmation (Karpoff, 1987): Buy when volume > 1.5×MA20 & price up
-            5. Support/Resistance (Edwards & Magee, 1948): Buy near support, Sell near resistance
-        
-        Args:
-            data: DataFrame with OHLC data (uses self.bfc_data if None)
-        
-        Returns:
-            expert_signal: Array of expert consensus signals (0=Down, 1=Up)
-            df: DataFrame with intermediate calculations
-        """
-        if data is None:
-            if self.bfc_data is None:
-                raise ValueError("No data available. Run get_data() first.")
-            data = self.bfc_data.copy()
-        
-        df = data.copy()
-        
-        # --- Rule 1: RSI (Relative Strength Index) ---
-        delta = df['close'].diff()
-        gain = delta.where(delta > 0, 0).rolling(14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-        rs = gain / loss
-        df['RSI'] = 100 - (100 / (1 + rs))
-        rsi_sig = ((df['RSI'] < 30).astype(int) - (df['RSI'] > 70).astype(int)).clip(0, 1)
-        
-        # --- Rule 2: MACD (Moving Average Convergence Divergence) ---
-        df['MACD'] = df['close'].ewm(span=12).mean() - df['close'].ewm(span=26).mean()
-        df['MACD_Signal'] = df['MACD'].ewm(span=9).mean()
-        macd_sig = (df['MACD'] > df['MACD_Signal']).astype(int)
-        
-        # --- Rule 3: Moving Average Crossover ---
-        df['SMA20'] = df['close'].rolling(20).mean()
-        df['SMA50'] = df['close'].rolling(50).mean()
-        ma_sig = (df['SMA20'] > df['SMA50']).astype(int)
-        
-        # --- Rule 4: Volume Confirmation ---
-        df['VMA20'] = df['volume'].rolling(20).mean()
-        df['Return'] = df['close'].pct_change()
-        vol_sig = ((df['volume'] > 1.5 * df['VMA20']) & (df['Return'] > 0)).astype(int)
-        
-        # --- Rule 5: Support/Resistance ---
-        df['Resistance'] = df['high'].rolling(20).max()
-        df['Support'] = df['low'].rolling(20).min()
-        sr_sig = pd.Series(0, index=df.index)
-        sr_sig[df['close'] <= df['Support'] * 1.02] = 1
-        sr_sig[df['close'] >= df['Resistance'] * 0.98] = 0
-        
-        # --- Aggregate: Simple Majority Vote ---
-        consensus = (rsi_sig + macd_sig + ma_sig + vol_sig + sr_sig) / 5.0
-        df = df.dropna().reset_index(drop=True)
-        
-        expert_signal = (consensus > 0.5).astype(int)
-        
-        return expert_signal, df
-    
-    def calculate_cohens_kappa(self, y_true, y_pred):
-        """
-        Calculate Cohen's Kappa with full statistical testing
-        
-        Formula:
-            p_o = (TP + TN) / N              (Observed agreement)
-            p_e = Σ(row_i × col_i) / N²      (Expected agreement by chance)
-            κ = (p_o - p_e) / (1 - p_e)      (Kappa coefficient)
-            SE = √[p_o(1-p_o) / (N(1-p_e)²)] (Standard error)
-            z = κ / SE                        (Z-statistic)
-        
-        Reference:
-            Cohen (1960) - A coefficient of agreement for nominal scales
-            Landis & Koch (1977) - The measurement of observer agreement
-        
-        Args:
-            y_true: Ground truth labels (0 or 1)
-            y_pred: Predicted labels (0 or 1)
-        
-        Returns:
-            Dictionary with kappa, p_o, p_e, standard error, z-statistic, p-value
-        """
-        cm = confusion_matrix(y_true, y_pred)
-        n = np.sum(cm)
-        p_o = np.trace(cm) / n
-        row_sums = np.sum(cm, axis=1)
-        col_sums = np.sum(cm, axis=0)
-        p_e = np.sum(row_sums * col_sums) / (n * n)
-        
-        denom = 1 - p_e
-        kappa = (p_o - p_e) / denom if denom > 0 else 0.0
-        se_kappa = np.sqrt(p_o * (1 - p_o) / (n * denom ** 2)) if denom > 0 else 0.0
-        z_stat = kappa / se_kappa if se_kappa > 0 else 0.0
-        p_value = 1 - norm.cdf(z_stat)  # One-tailed test
-        
-        return {
-            'kappa': kappa,
-            'p_o': p_o,
-            'p_e': p_e,
-            'se_kappa': se_kappa,
-            'z_stat': z_stat,
-            'p_value': p_value,
-            'n': n,
-            'confusion_matrix': cm
-        }
-    
-    def interpret_kappa(self, kappa):
-        """
-        Interpret Cohen's Kappa using Landis & Koch (1977) scale
-        
-        Args:
-            kappa: Cohen's Kappa coefficient
-        
-        Returns:
-            String interpretation
-        """
-        if kappa < 0:
-            return "Poor (worse than chance)"
-        elif kappa < 0.21:
-            return "Slight agreement"
-        elif kappa < 0.41:
-            return "Fair agreement"
-        elif kappa < 0.61:
-            return "Moderate agreement"
-        elif kappa < 0.81:
-            return "Substantial agreement"
-        else:
-            return "Almost perfect agreement"
-    
-    def compute_shap_expert_agreement(self, holdout_results=None):
-        """
-        Compute SHAP vs Expert Rules agreement using Cohen's Kappa (RQ3)
-        
-        Args:
-            holdout_results: Results from evaluate_holdout() (optional)
-        
-        Returns:
-            Dictionary with kappa results
-        """
-        print(f"\n[8/8] Computing SHAP vs Expert Rules Agreement (Cohen's Kappa)...")
-        
-        # Get holdout results if not provided
-        if holdout_results is None:
-            holdout_results = self.evaluate_holdout()
-        
-        # Compute expert signals
-        expert_signal, _ = self.compute_expert_signals()
-        
-        # Align with model evaluation window
-        y_pred_bin = (holdout_results['y_pred'] > 0.5).astype(int)
-        
-        # Align lengths
-        min_len = min(len(y_pred_bin), len(expert_signal))
-        y_pred_bin = y_pred_bin[:min_len]
-        expert_signal = expert_signal[-min_len:]
-        
-        # Calculate Cohen's Kappa
-        kappa_results = self.calculate_cohens_kappa(expert_signal, y_pred_bin)
-        
-        # Random baseline for comparison
-        random_pred = np.random.RandomState(42).randint(0, 2, size=min_len)
-        random_kappa = self.calculate_cohens_kappa(expert_signal, random_pred)
-        
-        self.kappa_results = kappa_results
-        
-        print(f"\n  Cohen's Kappa (SHAP vs Expert): {kappa_results['kappa']:.4f}")
-        print(f"    Interpretation: {self.interpret_kappa(kappa_results['kappa'])}")
-        print(f"    Observed Agreement (p_o): {kappa_results['p_o']*100:.2f}%")
-        print(f"    Expected Agreement (p_e): {kappa_results['p_e']*100:.2f}%")
-        print(f"    z-statistic: {kappa_results['z_stat']:.4f}")
-        print(f"    p-value (one-tailed): {kappa_results['p_value']:.6f}")
-        print(f"    Random baseline kappa: {random_kappa['kappa']:.4f}")
-        
-        # Hypothesis test
-        print(f"\n  Hypothesis Test (H₀: κ ≤ 0, Hₐ: κ > 0, α=0.05):")
-        if kappa_results['p_value'] < 0.05 and kappa_results['z_stat'] > 1.645:
-            print(f"    ✓ REJECT H₀: SHAP significantly agrees with expert rules")
-        else:
-            print(f"    ✗ FAIL TO REJECT H₀: No significant agreement detected")
-        
-        return kappa_results
-    
-    # =========================================================================
-    # SECTION 9: PREDICTED CANDLESTICK VISUALIZATION
-    # =========================================================================
-    
-    def compute_atr(self, df, period=14):
-        """
-        Calculate Average True Range for volatility-based position sizing
-        
-        True Range = max(High-Low, |High-Prev Close|, |Low-Prev Close|)
-        ATR = rolling mean of True Range
-        
-        Args:
-            df: DataFrame with 'high', 'low', 'close' columns
-            period: Lookback period for ATR calculation
-        
-        Returns:
-            ATR value
-        """
-        high = df['high'].values
-        low = df['low'].values
-        close = df['close'].values
-        
-        tr = [max(high[i]-low[i], abs(high[i]-close[i-1]), abs(low[i]-close[i-1])) 
-              for i in range(1, len(df))]
-        
-        return np.mean(tr[-period:]) if len(tr) >= period else np.mean(tr)
-    
-    def atr_multipliers(self, symbol=None):
-        """
-        Return take-profit and stop-loss multipliers based on asset class
-        
-        Different asset classes have different volatility profiles:
-            - Crypto: Highest volatility (2.0x, 1.0x)
-            - Forex/Commodities: Medium volatility (1.5x, 1.0x)
-            - Equities: Standard (1.5x, 1.0x)
-        
-        Args:
-            symbol: Trading symbol (uses self.symbol if None)
-        
-        Returns:
-            Tuple of (take_profit_multiplier, stop_loss_multiplier)
-        """
-        sym = (symbol or self.symbol).upper()
-        
-        if any(x in sym for x in ["BTC", "ETH", "SOL", "XRP", "BNB"]):
-            return 2.0, 1.0  # Wider targets for crypto
-        if sym.endswith("=X") or any(x in sym for x in ["USD", "EUR", "GBP", "JPY", "AUD", "CHF", "CAD"]):
-            return 1.5, 1.0  # Standard for forex
-        if any(x in sym for x in ["GC", "SI", "CL", "NG", "HG", "ZC"]):
-            return 1.5, 1.0  # Standard for commodities
-        return 1.5, 1.0  # Default for equities
-    
-    def predict_next_day(self, train_if_missing=True, n_splits=3, epochs=30):
-        """
-        Generate prediction for the next trading day with full pipeline
-        
-        Args:
-            train_if_missing: Automatically train if model is None
-            n_splits: Number of walk-forward folds
-            epochs: Training epochs per fold
-        
-        Returns:
-            Dictionary with prediction results
-        """
-        # Step 1: Get data
-        if self.bfc_data is None:
-            self.get_data()
-        
-        # Step 2: Prepare data and targets
-        data = self.create_target()
-        X_img, X_vol, y, dates = self.prepare_inputs(data)
-        
-        # Step 3: Train model if needed
-        if self.model is None and train_if_missing:
-            print("\nTraining model first...")
-            self.train_model(n_splits=n_splits, epochs=epochs)
-        elif self.model is None:
-            raise ValueError("Model not trained. Call train_model() first.")
-        
-        # Step 4: Run Monte Carlo prediction
-        mc_results = self.monte_carlo_predict(n_samples=100)
-        
-        # Step 5: Run holdout evaluation
-        holdout = self.evaluate_holdout()
-        
-        # Step 6: Compute SHAP explanations (optional)
-        try:
-            shap_results = self.compute_shap_explanations()
-        except Exception as e:
-            print(f"SHAP computation skipped: {e}")
-            shap_results = None
-        
-        return {
-            'prediction': mc_results,
-            'holdout_metrics': holdout,
-            'shap': shap_results,
-            'last_date': dates[-1] if dates else None
-        }
     
     def get_summary(self):
         """
