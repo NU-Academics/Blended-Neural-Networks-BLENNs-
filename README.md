@@ -113,224 +113,461 @@ trader = BLENNSWalkForward(symbol="BTC-USD", bfc_params=bfc_params)
 ### Complete Workflow with Visualizations
 
 ```python
+# -*- coding: utf-8 -*-
+"""
+================================================================================
+BLENNS ORIGINAL — Complete Trading Workflow
+================================================================================
+Author: BLENNS Framework Implementation
+Date: April 2026
+
+This script demonstrates the complete BLENNS trading pipeline:
+1. Data acquisition with BFC (Blended Filtered Candles) preprocessing
+2. Candlestick image generation and normalization
+3. CNN + LSTM + Attention model training with walk-forward validation
+4. Monte Carlo Dropout uncertainty estimation
+5. SHAP explainability with expert rule validation (RQ3)
+6. Cohen's Kappa agreement analysis
+7. Comprehensive visualization and performance reporting
+
+COMPATIBLE SYMBOLS:
+    Equities: AAPL, MSFT, AMZN, NVDA, GOOGL, META, TSLA, TLRY
+    Indices: ^SPX, ^NDX, ^DJI, ^RUT, ^SOX, ^VIX
+    Crypto: BTC-USD, ETH-USD, SOL-USD, XRP-USD, BNB-USD
+    Forex: EURUSD=X, GBPUSD=X, JPY=X, AUDUSD=X, CHF=X, CAD=X
+    Commodities: GC=F (Gold), SI=F (Silver), CL=F (Oil), NG=F, HG=F, ZC=F
+================================================================================
+"""
+
 from blenns_walk_forward import BLENNSWalkForward
 from blenns_walk_forward.utils import (
-    visualize_candles, 
-    explain_model_with_shap, 
-    plot_training_curves, 
+    visualize_candles,
+    explain_model_with_shap,
+    plot_training_curves,
     plot_uncertainty_candle,
     monte_carlo_predict,
     plot_roc_curve,
     plot_confusion_matrix,
     compute_atr,
     plot_predicted_candle,
-    normalize_data
+    normalize_data,
+    compute_expert_signals,
+    calculate_cohens_kappa,
+    interpret_kappa,
+    plot_kappa_agreement
 )
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import warnings
 warnings.filterwarnings("ignore")
 
+
 def enhanced_prediction_visualization(prediction, confidence, mean_pred, std_pred):
-    """Create a visual candle showing the prediction with uncertainty"""
+    """
+    Create a visual candle showing the prediction with uncertainty
+
+    Args:
+        prediction: 'Bullish' or 'Bearish'
+        confidence: Confidence level (0-1)
+        mean_pred: Mean prediction probability
+        std_pred: Standard deviation of predictions
+    """
     fig, ax = plt.subplots(figsize=(4, 6))
     fig.patch.set_facecolor("#0a0a0f")
     ax.set_facecolor("#0a0a0f")
-    
+
     # Determine candle color and position
     if prediction == "Bullish":
         color = '#22c55e'  # Green
         body_height = confidence * 0.8
-        body_bottom = 0.5 - body_height/2
-        wick_top = 0.5 + body_height/2 + 0.15
-        wick_bottom = 0.5 - body_height/2 - 0.15
+        body_bottom = 0.5 - body_height / 2
+        wick_top = 0.5 + body_height / 2 + 0.15
+        wick_bottom = 0.5 - body_height / 2 - 0.15
     else:  # Bearish
         color = '#ef4444'  # Red
         body_height = confidence * 0.8
-        body_bottom = 0.5 - body_height/2
-        wick_top = 0.5 + body_height/2 + 0.15
-        wick_bottom = 0.5 - body_height/2 - 0.15
-    
+        body_bottom = 0.5 - body_height / 2
+        wick_top = 0.5 + body_height / 2 + 0.15
+        wick_bottom = 0.5 - body_height / 2 - 0.15
+
     # Draw candle wick (uncertainty represented by wick length)
     ax.plot([0.5, 0.5], [wick_bottom, wick_top], color=color, linewidth=2)
-    
+
     # Draw candle body
-    ax.add_patch(plt.Rectangle((0.4, body_bottom), 0.2, body_height, 
+    ax.add_patch(plt.Rectangle((0.4, body_bottom), 0.2, body_height,
                               color=color, alpha=0.8))
-    
+
     # Add uncertainty shading
-    ax.fill_betweenx([wick_bottom, wick_top], 0.35, 0.65, 
+    ax.fill_betweenx([wick_bottom, wick_top], 0.35, 0.65,
                      alpha=0.2, color=color, label=f'±{std_pred:.3f} uncertainty')
-    
+
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis('off')
-    
+
     # Add prediction text
-    ax.text(0.5, 0.92, f"{prediction.upper()}", ha='center', va='center', 
+    ax.text(0.5, 0.92, f"{prediction.upper()}", ha='center', va='center',
             fontsize=18, fontweight='bold', color=color)
-    ax.text(0.5, 0.82, f"Confidence: {confidence:.1%}", ha='center', va='center', 
+    ax.text(0.5, 0.82, f"Confidence: {confidence:.1%}", ha='center', va='center',
             fontsize=11, color='#9ca3af')
-    ax.text(0.5, 0.08, f"Score: {mean_pred:.3f} ± {std_pred:.3f}", ha='center', va='center', 
+    ax.text(0.5, 0.08, f"Score: {mean_pred:.3f} ± {std_pred:.3f}", ha='center', va='center',
             fontsize=10, color='#9ca3af')
-    
+
     plt.title("BLENNS Prediction Candle", fontsize=14, pad=20, color='white')
     plt.tight_layout()
     plt.show()
 
-print("="*60)
-print(" BLENNS WALK-FORWARD TRADING SYSTEM")
-print("="*60)
 
-# Initialize with custom parameters
-print("\n Step 1: Initializing BLENNS Model...")
-trader = BLENNSWalkForward(symbol="AAPL")
+def print_section_header(title, width=60):
+    """Print a formatted section header"""
+    print("\n" + "=" * width)
+    print(f" {title}")
+    print("=" * width)
 
-# 1. Data Acquisition & BFC Processing
-print("\n Step 2: Fetching and processing data...")
+
+def print_subsection(title, width=50):
+    """Print a formatted subsection header"""
+    print("\n" + "-" * width)
+    print(f" {title}")
+    print("-" * width)
+
+
+# ============================================================================
+# MAIN EXECUTION
+# ============================================================================
+
+print_section_header("BLENNS ORIGINAL — COMPLETE TRADING WORKFLOW", 60)
+
+# Configuration
+SYMBOL = "AAPL"
+START_DATE = "2020-01-01"
+N_SPLITS = 3
+EPOCHS = 30
+BATCH_SIZE = 32
+
+print(f"\n Configuration:")
+print(f"   Symbol: {SYMBOL}")
+print(f"   Date Range: {START_DATE} to present")
+print(f"   Walk-Forward Folds: {N_SPLITS}")
+print(f"   Epochs per fold: {EPOCHS}")
+print(f"   Batch Size: {BATCH_SIZE}")
+
+# ============================================================================
+# STEP 1: Initialize BLENNS Model
+# ============================================================================
+
+print_section_header("STEP 1: Initializing BLENNS Model", 60)
+
+# Optional: Custom BFC parameters
+bfc_params = {
+    'alpha': 0.2,      # EMA smoothing factor
+    'R': 0.01,         # Kalman measurement noise
+    'Q': 1e-5          # Kalman process noise
+}
+
+trader = BLENNSWalkForward(symbol=SYMBOL, bfc_params=bfc_params)
+print(f"✓ BLENNS model initialized for {SYMBOL}")
+print(f"  BFC parameters: α={bfc_params['alpha']}, R={bfc_params['R']}, Q={bfc_params['Q']}")
+
+# ============================================================================
+# STEP 2: Data Acquisition & BFC Processing
+# ============================================================================
+
+print_section_header("STEP 2: Data Acquisition & BFC Processing", 60)
+
 try:
-    data = trader.get_data(start_date="2020-01-01")
-    print(f"    Data range: {data['date'].min().date()} to {data['date'].max().date()}")
-    print(f"    Total records: {len(data)}")
+    data = trader.get_data(start_date=START_DATE)
+    print(f"✓ Data fetched successfully")
+    print(f"   Date range: {data['date'].min().date()} to {data['date'].max().date()}")
+    print(f"   Total records: {len(data)}")
+    print(f"   Last close: {data['close'].iloc[-1]:.2f}")
 except Exception as e:
-    print(f"    Error fetching data: {e}")
+    print(f"✗ Error fetching data: {e}")
     exit(1)
 
-# 2. Target Creation
-print("\n Step 3: Creating prediction targets...")
-data = trader.create_target(data)
+# ============================================================================
+# STEP 3: Target Creation
+# ============================================================================
+
+print_section_header("STEP 3: Creating Prediction Targets", 60)
+
+data = trader.create_target(data, lookahead=1)
 bullish = data['target'].sum()
 bearish = len(data) - bullish
-print(f"    Target distribution: Bullish: {bullish} ({bullish/len(data)*100:.1f}%), Bearish: {bearish} ({bearish/len(data)*100:.1f}%)")
+print(f"✓ Target distribution:")
+print(f"   Bullish (Up):   {bullish} ({bullish/len(data)*100:.1f}%)")
+print(f"   Bearish (Down): {bearish} ({bearish/len(data)*100:.1f}%)")
 
-# 3. Prepare Inputs (Candlestick Image Generation)
-print("\n Step 4: Encoding BFC candlesticks...")
+# ============================================================================
+# STEP 4: Prepare Inputs (Candlestick Image Generation)
+# ============================================================================
+
+print_section_header("STEP 4: Candlestick Image Generation", 60)
+
 try:
-    X_img, X_vol, y = trader.prepare_inputs(data, window_size=5, img_size=64)
-    print(f"    Generated {len(X_img)} candlestick images")
-    print(f"    X_img shape: {X_img.shape}")
-    print(f"    X_vol shape: {X_vol.shape}")
-    print(f"    y shape: {y.shape}")
+    X_img, X_vol, y, dates = trader.prepare_inputs(data, window_size=5, img_size=64)
+    print(f"✓ Input preparation complete")
+    print(f"   X_img shape: {X_img.shape} (samples, timesteps, height, width, channels)")
+    print(f"   X_vol shape: {X_vol.shape} (samples, 1)")
+    print(f"   y shape: {y.shape} (samples,)")
+    print(f"   Total samples: {len(X_img)}")
 except Exception as e:
-    print(f"    Error encoding candles: {e}")
+    print(f"✗ Error preparing inputs: {e}")
     exit(1)
 
-# 4. Visualize Processed Candles
-print("\n👀 Step 5: Displaying BFC-processed candles...")
-try:
-    visualize_candles(X_img[:, 0, :, :, :], n=4)
-except Exception as e:
-    print(f"    Could not visualize candles: {e}")
+# ============================================================================
+# STEP 5: Visualize Processed Candles
+# ============================================================================
 
-# 5. Model Training
-print("\n Step 6: Training BLENNS model...")
-print("   (This may take a few minutes...)")
+print_section_header("STEP 5: BFC-Processed Candlestick Visualization", 60)
+
 try:
-    metrics = trader.train_model(n_splits=3, epochs=30, batch_size=32, verbose=1)
-    print(f"\n    Training complete!")
-    print(f"    Average Accuracy: {np.mean(metrics['fold_accs'])*100:.2f}%")
-    print(f"    Average AUC: {np.mean(metrics['fold_aucs'])*100:.2f}%")
+    # Display sample BFC candles
+    visualize_candles(X_img[:, 0, :, :, :], n=4, title_prefix="BFC Candle")
+    print("✓ BFC candle visualization complete")
 except Exception as e:
-    print(f"    Error during training: {e}")
+    print(f"⚠ Could not visualize candles: {e}")
+
+# ============================================================================
+# STEP 6: Model Training (Walk-Forward Validation)
+# ============================================================================
+
+print_section_header("STEP 6: Model Training (Walk-Forward Validation)", 60)
+print("   This may take a few minutes...")
+
+try:
+    metrics = trader.train_model(n_splits=N_SPLITS, epochs=EPOCHS,
+                                batch_size=BATCH_SIZE, verbose=1)
+
+    print(f"\n✓ Training complete!")
+    print(f"   Average Accuracy: {np.mean(metrics['fold_accs'])*100:.2f}% (±{np.std(metrics['fold_accs'])*100:.2f}%)")
+    print(f"   Average AUC: {np.mean(metrics['fold_aucs'])*100:.2f}% (±{np.std(metrics['fold_aucs'])*100:.2f}%)")
+    print(f"   Average Loss: {np.mean(metrics['fold_losses']):.4f}")
+
+except Exception as e:
+    print(f"✗ Error during training: {e}")
     exit(1)
 
-# 6. Generate Prediction with Confidence
-print("\n Step 7: Generating prediction...")
+# ============================================================================
+# STEP 7: Generate Prediction with Monte Carlo Dropout
+# ============================================================================
+
+print_section_header("STEP 7: Monte Carlo Dropout Prediction", 60)
+
 try:
     result = trader.predict_next_day(train_if_missing=False)
-    print(f"\n    FINAL PREDICTION: {result['direction']}")
-    print(f"    Confidence: {result['confidence']:.1%}")
-    print(f"    Raw Probability: {result['mean']:.4f} ± {result['std']:.4f}")
+    print(f"✓ Prediction generated")
+    print(f"   Direction: {result['direction']}")
+    print(f"   Confidence: {result['confidence']:.1%}")
+    print(f"   Raw Probability: {result['mean']:.4f} ± {result['std']:.4f}")
 except Exception as e:
-    print(f"    Error generating prediction: {e}")
+    print(f"✗ Error generating prediction: {e}")
     exit(1)
 
-# 7. Display Visual Prediction Candle
-print("\n🕯️ Step 8: Generating prediction candle...")
+# ============================================================================
+# STEP 8: Display Visual Prediction Candle
+# ============================================================================
+
+print_section_header("STEP 8: Prediction Candle Visualization", 60)
+
 try:
     enhanced_prediction_visualization(
-        result['direction'], 
+        result['direction'],
         result['confidence'],
         result['mean'],
         result['std']
     )
+    print("✓ Prediction candle displayed")
 except Exception as e:
-    print(f"    Could not display prediction candle: {e}")
+    print(f"⚠ Could not display prediction candle: {e}")
 
-# 8. Uncertainty Analysis
-print("\n Step 9: Calculating prediction uncertainty...")
+# ============================================================================
+# STEP 9: Uncertainty Analysis
+# ============================================================================
+
+print_section_header("STEP 9: Uncertainty Analysis", 60)
+
 try:
     plot_uncertainty_candle(result['predictions'])
+    print("✓ Uncertainty distribution plotted")
+    print(f"   Prediction range: [{result['predictions'].min():.4f}, {result['predictions'].max():.4f}]")
+    print(f"   95% Confidence interval: [{np.percentile(result['predictions'], 2.5):.4f}, "
+          f"{np.percentile(result['predictions'], 97.5):.4f}]")
 except Exception as e:
-    print(f"    Could not plot uncertainty: {e}")
+    print(f"⚠ Could not plot uncertainty: {e}")
 
-# 9. Model Evaluation (Holdout)
-print("\n Step 10: Evaluating model on holdout data...")
+# ============================================================================
+# STEP 10: Model Evaluation (Holdout)
+# ============================================================================
+
+print_section_header("STEP 10: Model Evaluation (Holdout)", 60)
+
 try:
     eval_results = trader.evaluate_holdout(test_size=0.2)
-    print(f"    Holdout Accuracy: {eval_results['accuracy']*100:.2f}%")
-    print(f"    Holdout AUC: {eval_results['auc']*100:.2f}%")
-    
-    # Plot ROC curve
-    print("\n    Plotting ROC curve...")
-    plot_roc_curve(eval_results['y_true'], eval_results['y_pred'])
-    
-    # Plot confusion matrix
-    print("    Plotting confusion matrix...")
-    plot_confusion_matrix(eval_results['confusion_matrix'])
-except Exception as e:
-    print(f"    Could not evaluate model: {e}")
+    print(f"✓ Holdout evaluation complete")
+    print(f"   Holdout Accuracy: {eval_results['accuracy']*100:.2f}%")
+    print(f"   Holdout AUC: {eval_results['auc']*100:.2f}%")
+    print(f"   True Positives: {eval_results['confusion_matrix'][1, 1]}")
+    print(f"   True Negatives: {eval_results['confusion_matrix'][0, 0]}")
+    print(f"   False Positives: {eval_results['confusion_matrix'][1, 0]}")
+    print(f"   False Negatives: {eval_results['confusion_matrix'][0, 1]}")
 
-# 10. Model Explanations (Perturbation-based SHAP)
-print("\n Step 11: Generating SHAP explanations...")
+    # Plot ROC curve
+    print("\n   Plotting ROC curve...")
+    plot_roc_curve(eval_results['y_true'], eval_results['y_pred'])
+
+    # Plot confusion matrix
+    print("   Plotting confusion matrix...")
+    plot_confusion_matrix(eval_results['confusion_matrix'])
+
+except Exception as e:
+    print(f"⚠ Could not evaluate model: {e}")
+
+# ============================================================================
+# STEP 11: SHAP Explainability (RQ3)
+# ============================================================================
+
+print_section_header("STEP 11: SHAP Explainability (RQ3)", 60)
+
 if len(X_img) >= 10:
     try:
-        # Use perturbation-based SHAP (works with TimeDistributed models)
-        shap_result = explain_model_with_shap(trader.model, X_img, X_vol, sample_idx=-1, n_samples=30)
-        if shap_result is None:
-            print("    SHAP explanation skipped (insufficient data or computation error)")
+        shap_result = explain_model_with_shap(trader.model, X_img, X_vol,
+                                              sample_idx=-1, n_samples=30)
+        if shap_result:
+            print("✓ SHAP explanation complete")
+            print("   Feature impacts (higher = more important):")
+            for feature, impact in sorted(shap_result.items(), key=lambda x: -x[1]):
+                print(f"     {feature:<35}: {impact:.6f}")
         else:
-            print("    SHAP explanation complete")
+            print("⚠ SHAP explanation returned no results")
     except Exception as e:
-        print(f"    SHAP explanation failed: {e}")
+        print(f"⚠ SHAP explanation failed: {e}")
 else:
-    print(f"    Not enough samples for SHAP explanation (have {len(X_img)}, need 10)")
+    print(f"⚠ Not enough samples for SHAP explanation (need 10, have {len(X_img)})")
 
-# 11. Predicted Candle Visualization with ATR
-print("\n🕯️ Step 12: Generating predicted candle chart...")
+# ============================================================================
+# STEP 12: Expert Rules and Cohen's Kappa (RQ3)
+# ============================================================================
+
+print_section_header("STEP 12: Expert Rules & Cohen's Kappa (RQ3)", 60)
+
+try:
+    # Compute expert signals (5 technical analysis rules)
+    print("   Computing expert signals (RSI, MACD, MA Crossover, Volume, Support/Resistance)...")
+    expert_signal, expert_df = compute_expert_signals(data)
+
+    # Get model predictions from holdout evaluation
+    y_pred_bin = (eval_results['y_pred'] > 0.5).astype(int)
+    y_true = eval_results['y_true']
+
+    # Align lengths
+    min_len = min(len(y_pred_bin), len(expert_signal))
+    y_pred_aligned = y_pred_bin[:min_len]
+    expert_aligned = expert_signal[-min_len:]
+
+    # Calculate Cohen's Kappa
+    kappa_results = calculate_cohens_kappa(expert_aligned, y_pred_aligned)
+
+    print(f"\n✓ Cohen's Kappa Results:")
+    print(f"   Cohen's Kappa (κ): {kappa_results['kappa']:.4f}")
+    print(f"   Interpretation: {interpret_kappa(kappa_results['kappa'])}")
+    print(f"   Observed Agreement (p_o): {kappa_results['p_o']*100:.2f}%")
+    print(f"   Expected Agreement (p_e): {kappa_results['p_e']*100:.2f}%")
+    print(f"   Standard Error: {kappa_results['se_kappa']:.6f}")
+    print(f"   z-statistic: {kappa_results['z_stat']:.4f}")
+    print(f"   p-value (one-tailed): {kappa_results['p_value']:.6f}")
+
+    # Hypothesis test
+    print(f"\n   Hypothesis Test (H₀: κ ≤ 0, Hₐ: κ > 0, α=0.05):")
+    if kappa_results['p_value'] < 0.05 and kappa_results['z_stat'] > 1.645:
+        print(f"   ✓ REJECT H₀: SHAP significantly agrees with expert rules")
+    else:
+        print(f"   ✗ FAIL TO REJECT H₀: No significant agreement detected")
+
+    # Random baseline for comparison
+    np.random.seed(42)
+    random_pred = np.random.randint(0, 2, size=len(expert_aligned))
+    random_kappa = calculate_cohens_kappa(expert_aligned, random_pred)
+    print(f"\n   Random baseline κ: {random_kappa['kappa']:.4f}")
+
+    # Plot kappa agreement
+    plot_kappa_agreement(kappa_results, random_kappa)
+
+except Exception as e:
+    print(f"⚠ Could not compute Cohen's Kappa: {e}")
+
+# ============================================================================
+# STEP 13: Predicted Candle Visualization with ATR
+# ============================================================================
+
+print_section_header("STEP 13: Predicted Candle Chart", 60)
+
 try:
     # Calculate ATR for risk management
     atr_value = compute_atr(data, period=14)
-    print(f"    ATR (14-period): {atr_value:.4f}")
-    
+    print(f"✓ ATR (14-period): {atr_value:.4f}")
+
     # Plot predicted candle with historical context
     plot_predicted_candle(
-        trader.raw_data, 
-        result['direction'], 
-        result['confidence'], 
+        trader.raw_data,
+        result['direction'],
+        result['confidence'],
         atr_value,
-        symbol="AAPL",
+        symbol=SYMBOL,
         n_show=15
     )
+    print("✓ Predicted candle chart displayed")
 except Exception as e:
-    print(f"    Could not plot predicted candle: {e}")
+    print(f"⚠ Could not plot predicted candle: {e}")
 
-# Summary
-print("\n" + "="*60)
-print(" BLENNS ANALYSIS COMPLETE!")
-print("="*60)
-print(f"\n SUMMARY:")
-print(f"   Symbol: AAPL")
-print(f"   Direction: {result['direction']}")
-print(f"   Confidence: {result['confidence']:.1%}")
-print(f"   Model Accuracy: {np.mean(metrics['fold_accs'])*100:.2f}%")
-print(f"   Model AUC: {np.mean(metrics['fold_aucs'])*100:.2f}%")
-print(f"   Uncertainty: ±{result['std']:.4f}")
-print("\n Next Steps:")
-print("   1. Use this prediction for research purposes only")
-print("   2. Always validate with your own analysis")
-print("   3. Consider risk management before any trading decision")
-print("="*60)
+# ============================================================================
+# FINAL SUMMARY
+# ============================================================================
+
+print_section_header("BLENNS ANALYSIS COMPLETE!", 60)
+
+print(f"""
+ SUMMARY:
+ ================================================================
+   Symbol:                    {SYMBOL}
+   Date Range:                {START_DATE} to present
+   Total Samples:             {len(data)}
+   Training Samples:          {len(X_img)}
+
+   Model Performance:
+   ----------------------------------------------------------------
+   Average Accuracy:          {np.mean(metrics['fold_accs'])*100:.2f}%
+   Average AUC:               {np.mean(metrics['fold_aucs'])*100:.2f}%
+   Holdout Accuracy:          {eval_results['accuracy']*100:.2f}%
+   Holdout AUC:               {eval_results['auc']*100:.2f}%
+
+   Prediction:
+   ----------------------------------------------------------------
+   Direction:                 {result['direction']}
+   Confidence:                {result['confidence']:.1%}
+   Raw Score:                 {result['mean']:.4f} ± {result['std']:.4f}
+
+   Explainability (RQ3):
+   ----------------------------------------------------------------
+   Cohen's Kappa (κ):         {kappa_results['kappa']:.4f}
+   Interpretation:            {interpret_kappa(kappa_results['kappa'])}
+   p-value:                   {kappa_results['p_value']:.6f}
+
+   Risk Management:
+   ----------------------------------------------------------------
+   ATR (14-period):           {atr_value:.4f}
+
+ Next Steps:
+ ================================================================
+   1. Use this prediction for research purposes only
+   2. Always validate with your own analysis
+   3. Consider risk management before any trading decision
+   4. SHAP explanations show {'significant' if kappa_results['p_value'] < 0.05 else 'no'} agreement
+   5. Human oversight remains essential for trading decisions
+""")
+
+print_section_header("END OF ANALYSIS", 60)
 ```
 
 ##  System Architecture
