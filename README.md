@@ -39,10 +39,18 @@ Blend Neural Networks (BLENNs) is a cutting-edge trading prediction system that 
 ### Quick Install
 
 ```bash
-# Clone the repository
-git clone https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-.git
-cd Blended-Neural-Networks-BLENNs-
-pip install -e .
+from blenns_walk_forward import BLENNSWalkForward
+
+# Initialize with any financial instrument
+trader = BLENNSWalkForward(symbol="AAPL")
+
+# Get instant prediction
+result = trader.predict_next_day()
+
+# Access prediction correctly
+print(f"Next day prediction: {result['prediction']['direction']}")
+print(f"Confidence: {result['prediction']['confidence']:.2%}")
+print(f"Raw Score: {result['prediction']['mean']:.4f} ± {result['prediction']['std']:.4f}")
 ```
 
 ### Google Colab Installation
