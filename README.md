@@ -16,21 +16,21 @@
 *Revolutionizing market analysis with Blenns Filter Candles and deep learning*
 
 
-## 🚀 Overview
+##  Overview
 
 Blend Neural Networks (BLENNs) is a cutting-edge trading prediction system that combines advanced signal processing with deep learning to forecast financial market movements. The system features our proprietary **BFC (Blenns Filter Candles)** technology for superior noise reduction and pattern recognition.
 
-### ✨ Key Features
+###  Key Features
 
-- **🔄 BFC Processing**: Multi-stage filtering for clean signals
-- **🧠 Deep Learning**: CNN + LSTM + Attention architecture for temporal pattern recognition
-- **📈 Multi-Asset Support**: Stocks, Crypto, Forex, Commodities, Indices
-- **🔍 Walk-Forward Validation**: Robust time-series training preventing look-ahead bias
-- **📊 SHAP Explanations**: Model interpretability with feature importance analysis
-- **🎯 Uncertainty Estimation**: Monte Carlo dropout for prediction confidence intervals
-- **🖼️ Visual Analytics**: Comprehensive candlestick visualization and performance metrics
+- ** BFC Processing**: Multi-stage filtering for clean signals
+- ** Deep Learning**: CNN + LSTM + Attention architecture for temporal pattern recognition
+- ** Multi-Asset Support**: Stocks, Crypto, Forex, Commodities, Indices
+- ** Walk-Forward Validation**: Robust time-series training preventing look-ahead bias
+- ** SHAP Explanations**: Model interpretability with feature importance analysis
+- ** Uncertainty Estimation**: Monte Carlo dropout for prediction confidence intervals
+- ** Visual Analytics**: Comprehensive candlestick visualization and performance metrics
 
-## 🛠️ Installation
+##  Installation
 
 ### Prerequisites
 
@@ -57,7 +57,7 @@ pip install -e .
 !pip install -e .
 ```
 
-## 🎯 Quick Start
+##  Quick Start
 
 ### Basic Prediction
 
@@ -69,8 +69,8 @@ trader = BLENNSWalkForward(symbol="AAPL")
 
 # Get instant prediction
 result = trader.predict_next_day()
-print(f"📈 Next day prediction: {result['direction']}")
-print(f"📊 Confidence: {result['confidence']:.2%}")
+print(f" Next day prediction: {result['direction']}")
+print(f" Confidence: {result['confidence']:.2%}")
 ```
 
 ### Multi-Asset Analysis
@@ -84,10 +84,10 @@ symbols = ["AAPL", "BTC-USD", "EURUSD=X", "GC=F", "^SPX"]
 for symbol in symbols:
     trader = BLENNSWalkForward(symbol=symbol)
     result = trader.predict_next_day()
-    print(f"🎯 {symbol}: {result['direction']} ({result['confidence']:.1%} conf)")
+    print(f" {symbol}: {result['direction']} ({result['confidence']:.1%} conf)")
 ```
 
-## 📊 Supported Markets
+##  Supported Markets
 
 | **Category** | **Examples** | **Yahoo Finance Symbol** |
 |--------------|--------------|--------------------------|
@@ -260,7 +260,7 @@ except Exception as e:
     print(f"    Could not display prediction candle: {e}")
 
 # 8. Uncertainty Analysis
-print("\n📈 Step 9: Calculating prediction uncertainty...")
+print("\n Step 9: Calculating prediction uncertainty...")
 try:
     plot_uncertainty_candle(result['predictions'])
 except Exception as e:
@@ -483,7 +483,7 @@ Fusion_Output = {
 }
 ```
 
-## 📊 Model Parameters Summary
+##  Model Parameters Summary
 
 | Component | Parameters | Output Shape | Purpose |
 |-----------|------------|--------------|---------|
@@ -603,14 +603,14 @@ Context Vector: ∑(weights × values)
 ### Sample Performance Output
 
 ```
-🚀 BLENNS Walk Forward Analysis: AAPL
+ BLENNS Walk Forward Analysis: AAPL
 ========================================
  Data Range: 2015-01-02 to 2025-09-25 (2699 records)
  Target Distribution: Balanced dataset
  Generated 2693 BFC-processed candlestick images
  Training Complete - Final Accuracy: 95.55%
 
-📈 STATISTICAL VALIDATION RESULTS:
+ STATISTICAL VALIDATION RESULTS:
 ├── Hansen's SPA Test: p = 0.0000 
 ├── Diebold-Mariano Test: p = 0.0000 
 ├── Relative vs ARIMA: +113.77% improvement
@@ -676,7 +676,7 @@ The system provides detailed feature importance analysis:
 - **Confidence Intervals**: Prediction ± standard deviation
 - **Visual Candles**: Uncertainty represented as candlestick shadows
 
-## ⚙️ Configuration Options
+##  Configuration Options
 
 ### BFC Parameters
 ```python
@@ -699,7 +699,7 @@ training_params = {
 }
 ```
 
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### Common Issues & Solutions
 
@@ -785,7 +785,7 @@ The Blenns Filter Candles (BFC) system applies three-stage processing:
 - **Attention Mechanism**: Focuses on most relevant time steps
 - **Multi-Modal Fusion**: Combines visual patterns with volume data
 
-## ⚠️ Important Disclaimers
+##  Important Disclaimers
 
 ### Risk Warning
 - This is a **research and educational tool**, not financial advice
@@ -821,7 +821,7 @@ pytest tests/
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 📞 Support & Community
+##  Support & Community
 
 - **GitHub Issues**: [Report bugs & request features](https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-/issues)
 - **Discussions**: [Join the community](https://github.com/NU-Academics/Blended-Neural-Networks-BLENNs-/discussions)
