@@ -1,55 +1,241 @@
-# BLENNS Walk Forward Trading System
+# BLENNS ORIGINAL — Complete Trading Pipeline
 # MANIFEST.in - Package distribution configuration
+# Author: BLENNS Framework Implementation
+# Date: April 2026
 
-# Core package files
+# ============================================================================
+# CORE PACKAGE FILES
+# ============================================================================
+
+# License and documentation
 include LICENSE
+include LICENSE.txt
 include README.md
+include README.rst
 include requirements.txt
+include requirements-dev.txt
 include pyproject.toml
 include setup.py
 include setup.cfg
+
+# Version file
+include blenns_walk_forward/VERSION
+include blenns_walk_forward/version.py
+
+# ============================================================================
+# SOURCE CODE FILES
+# ============================================================================
 
 # Include all Python source files
 recursive-include blenns_walk_forward *.py
 recursive-include blenns_walk_forward *.pyx
 recursive-include blenns_walk_forward *.pxd
+recursive-include blenns_walk_forward *.pyi
 
-# Include data files and resources
-recursive-include blenns_walk_forward *.png
-recursive-include blenns_walk_forward *.jpg
-recursive-include blenns_walk_forward *.csv
-recursive-include blenns_walk_forward *.json
-recursive-include blenns_walk_forward *.h5
-recursive-include blenns_walk_forward *.weights
+# Include core module files
+include blenns_walk_forward/__init__.py
+include blenns_walk_forward/core.py
+include blenns_walk_forward/utils.py
+include blenns_walk_forward/models.py
+include blenns_walk_forward/bfc.py
+include blenns_walk_forward/experts.py
+include blenns_walk_forward/stats.py
 
-# Include example notebooks and documentation
-recursive-include examples *.ipynb
+# ============================================================================
+# DATA FILES AND RESOURCES
+# ============================================================================
+
+# Include model weights and checkpoints
+recursive-include blenns_walk_forward/weights *.h5
+recursive-include blenns_walk_forward/weights *.weights
+recursive-include blenns_walk_forward/weights *.ckpt
+recursive-include blenns_walk_forward/weights *.pkl
+
+# Include configuration files
+recursive-include blenns_walk_forward/config *.yaml
+recursive-include blenns_walk_forward/config *.yml
+recursive-include blenns_walk_forward/config *.json
+
+# Include data samples
+recursive-include blenns_walk_forward/data *.csv
+recursive-include blenns_walk_forward/data *.parquet
+recursive-include blenns_walk_forward/data *.hdf5
+
+# Include image resources
+recursive-include blenns_walk_forward/images *.png
+recursive-include blenns_walk_forward/images *.jpg
+recursive-include blenns_walk_forward/images *.jpeg
+recursive-include blenns_walk_forward/images *.svg
+
+# Include result files
+recursive-include blenns_walk_forward/results *.csv
+recursive-include blenns_walk_forward/results *.json
+recursive-include blenns_walk_forward/results *.html
+
+# ============================================================================
+# EXAMPLES AND NOTEBOOKS
+# ============================================================================
+
+# Include example scripts
 recursive-include examples *.py
+recursive-include examples *.ipynb
+recursive-include examples *.sh
+
+# Include demo files
+recursive-include demos *.py
+recursive-include demos *.ipynb
+
+# Include tutorial notebooks
+recursive-include tutorials *.ipynb
+recursive-include tutorials *.md
+
+# ============================================================================
+# DOCUMENTATION
+# ============================================================================
+
+# Include documentation files
 recursive-include docs *.md
 recursive-include docs *.rst
+recursive-include docs *.txt
+recursive-include docs *.html
+recursive-include docs *.pdf
+
+# Include API documentation
+recursive-include docs/source *.rst
+recursive-include docs/build *.html
+
+# Include user guides
+include docs/GUIDE.md
+include docs/API.md
+include docs/EXAMPLES.md
+include docs/FAQ.md
+
+# ============================================================================
+# TEST FILES
+# ============================================================================
 
 # Include test files
 recursive-include tests *.py
 recursive-include tests *.csv
+recursive-include tests *.json
+recursive-include tests *.yaml
 
-# Include configuration and metadata
+# Include test fixtures
+recursive-include tests/fixtures *.csv
+recursive-include tests/fixtures *.h5
+recursive-include tests/fixtures *.pkl
+
+# Include benchmark files
+recursive-include benchmarks *.py
+recursive-include benchmarks *.sh
+
+# ============================================================================
+# CONFIGURATION AND METADATA
+# ============================================================================
+
+# Git configuration
 include .gitignore
+include .gitattributes
+
+# Pre-commit hooks
 include .pre-commit-config.yaml
+
+# Code quality
+include .flake8
+include .pylintrc
+include .isort.cfg
+include .black.toml
+include .mypy.ini
+
+# Continuous integration
+include .github/workflows/*.yml
+include .github/CODEOWNERS
+include .github/ISSUE_TEMPLATE/*.md
+include .github/PULL_REQUEST_TEMPLATE.md
+
+# Code of conduct and contributing guidelines
 include CODE_OF_CONDUCT.md
 include CONTRIBUTING.md
-include CHANGELOG.md
+include SECURITY.md
 
-# Exclude unnecessary files
+# Changelog
+include CHANGELOG.md
+include HISTORY.md
+
+# ============================================================================
+# EXCLUDE UNNECESSARY FILES
+# ============================================================================
+
+# Python cache files
 global-exclude __pycache__
 global-exclude *.py[cod]
+global-exclude *.pyo
 global-exclude *.so
-global-exclude .DS_Store
+global-exclude *.dll
+global-exclude *.dylib
+
+# Compiled files
+global-exclude *.pyc
+global-exclude *.pyd
 global-exclude *.egg-info
-global-exclude .pytest_cache
-global-exclude .coverage
-global-exclude htmlcov
-global-exclude .tox
-global-exclude .mypy_cache
+global-exclude *.egg
+
+# Virtual environments
+global-exclude .env
+global-exclude .venv
+global-exclude env/
+global-exclude venv/
+
+# IDE files
+global-exclude .DS_Store
 global-exclude .vscode
 global-exclude .idea
+global-exclude *.swp
+global-exclude *.swo
+global-exclude *~
+
+# Testing and coverage
+global-exclude .pytest_cache
+global-exclude .coverage
+global-exclude .coverage.*
+global-exclude htmlcov
+global-exclude .tox
+global-exclude .nox
+global-exclude .mypy_cache
+global-exclude .ruff_cache
+
+# Jupyter notebooks
+global-exclude .ipynb_checkpoints
 global-exclude *.ipynb_checkpoints
+
+# Log files
+global-exclude *.log
+global-exclude *.out
+global-exclude *.err
+
+# Temporary files
+global-exclude *.tmp
+global-exclude *.temp
+global-exclude *.bak
+global-exclude *.backup
+
+# OS metadata
+global-exclude Thumbs.db
+global-exclude desktop.ini
+
+# ============================================================================
+# PRUNE EXCLUDED DIRECTORIES
+# ============================================================================
+
+prune __pycache__
+prune .pytest_cache
+prune .coverage
+prune htmlcov
+prune .tox
+prune .mypy_cache
+prune .ruff_cache
+prune .vscode
+prune .idea
+prune build
+prune dist
+prune *.egg-info
