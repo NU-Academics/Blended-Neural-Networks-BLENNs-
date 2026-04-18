@@ -55,10 +55,6 @@ from .utils import (
     calculate_cohens_kappa,
     interpret_kappa,
     
-    # Statistical Tests
-    diebold_mariano_test,
-    hansen_spa_test,
-    
     # ATR Calculation
     compute_atr_vectorized,
     compute_atr_series,
@@ -95,10 +91,6 @@ __all__ = [
     'compute_expert_signals',
     'calculate_cohens_kappa',
     'interpret_kappa',
-    
-    # Statistical Tests
-    'diebold_mariano_test',
-    'hansen_spa_test',
     
     # ATR Calculation
     'compute_atr_vectorized',
