@@ -31,16 +31,6 @@ REFERENCES:
 
 from .core import BLENNSWalkForward
 from .utils import (
-    # BFC Core Functions
-    exponential_moving_average,
-    kalman_filter,
-    compute_bfc,
-    
-    # Data Processing
-    get_yfinance_data,
-    encode_candle_chart,
-    normalize_data,
-    
     # Visualization
     visualize_candles,
     plot_training_curves,
@@ -50,6 +40,9 @@ from .utils import (
     plot_confusion_matrix,
     plot_shap_importance,
     plot_kappa_agreement,
+    
+    # Data Processing
+    normalize_data,
     
     # Analysis Utilities
     explain_model_with_shap,
@@ -80,16 +73,6 @@ __all__ = [
     # Core classes
     'BLENNSWalkForward',
     
-    # BFC Core Functions
-    'exponential_moving_average',
-    'kalman_filter',
-    'compute_bfc',
-    
-    # Data Processing
-    'get_yfinance_data',
-    'encode_candle_chart',
-    'normalize_data',
-    
     # Visualization
     'visualize_candles',
     'plot_training_curves',
@@ -99,6 +82,9 @@ __all__ = [
     'plot_confusion_matrix',
     'plot_shap_importance',
     'plot_kappa_agreement',
+    
+    # Data Processing
+    'normalize_data',
     
     # Analysis Utilities
     'explain_model_with_shap',
