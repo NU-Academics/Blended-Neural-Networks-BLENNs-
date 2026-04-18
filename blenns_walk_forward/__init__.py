@@ -54,7 +54,6 @@ from .utils import (
     compute_expert_signals,
     calculate_cohens_kappa,
     interpret_kappa,
-    compute_shap_expert_agreement,
     
     # Statistical Tests
     diebold_mariano_test,
@@ -96,7 +95,6 @@ __all__ = [
     'compute_expert_signals',
     'calculate_cohens_kappa',
     'interpret_kappa',
-    'compute_shap_expert_agreement',
     
     # Statistical Tests
     'diebold_mariano_test',
